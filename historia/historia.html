@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>El Gnomo Evanescente - Aventura Nivel 1</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Georgia', serif;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm 16mm;
+    page-break-after: always;
+    position: relative;
+    background: #fdfaf3;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* PORTADA */
+  .cover {
+    background: linear-gradient(180deg, #0d2b1a 0%, #14532d 60%, #0d2b1a 100%);
+    color: #f5f0dc;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .cover .banner {
+    border: 6px double #d4af37;
+    padding: 30px 40px;
+    background: rgba(0,0,0,0.35);
+    margin-bottom: 40px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    color: #f5e6a8;
+    text-shadow: 2px 2px 4px #000;
+    margin: 10px 0;
+    letter-spacing: 2px;
+  }
+  .cover .sub {
+    font-size: 18px;
+    color: #d4af37;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .cover .level {
+    font-size: 26px;
+    font-weight: bold;
+    color: #fff;
+    margin-top: 15px;
+    letter-spacing: 4px;
+  }
+  .cover .tagline {
+    font-style: italic;
+    color: #c9b87a;
+    margin-top: 30px;
+    font-size: 14px;
+  }
+
+  /* TIPOGRAFÍA */
+  h2 {
+    color: #14532d;
+    border-bottom: 3px solid #14532d;
+    padding-bottom: 6px;
+    font-size: 22px;
+    margin-top: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  h3 {
+    color: #7a1f1f;
+    font-size: 17px;
+    margin: 18px 0 8px;
+    border-left: 5px solid #7a1f1f;
+    padding-left: 10px;
+  }
+  h4 {
+    color: #14532d;
+    font-size: 15px;
+    margin: 14px 0 6px;
+    font-variant: small-caps;
+  }
+  p, li { font-size: 13px; line-height: 1.55; text-align: justify; }
+  ul, ol { padding-left: 22px; }
+
+  /* CAJAS ESPECIALES */
+  .box {
+    border: 2px solid #14532d;
+    background: #eef6ee;
+    padding: 12px 16px;
+    margin: 12px 0;
+    border-radius: 4px;
+  }
+  .box.read {
+    border-left: 6px solid #7a1f1f;
+    background: #fdf2f2;
+    font-style: italic;
+    color: #3a0a0a;
+  }
+  .box.secret {
+    border: 2px dashed #8a6d00;
+    background: #fffbe6;
+  }
+  .box.secret::before {
+    content: "🔒 ¡SECRETO DEL DM! ";
+    font-weight: bold;
+    color: #8a6d00;
+    font-style: normal;
+  }
+  .box.note {
+    border: 2px solid #b8860b;
+    background: #fff8dc;
+    font-family: 'Comic Sans MS', cursive;
+    font-size: 12.5px;
+    transform: rotate(-0.5deg);
+  }
+  .box.classified {
+    border: 3px solid #8b0000;
+    background: #2b0000;
+    color: #ffcccc;
+    text-align: center;
+    font-weight: bold;
+    letter-spacing: 4px;
+    padding: 6px;
+  }
+
+  /* TABLAS */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  th {
+    background: #14532d;
+    color: #f5f0dc;
+    padding: 8px;
+    text-align: left;
+  }
+  td {
+    border: 1px solid #14532d;
+    padding: 7px 10px;
+    background: #fbfdf9;
+  }
+  tr:nth-child(even) td { background: #eef6ee; }
+
+  /* CHECKLIST */
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li::before { content: "☐ "; color: #14532d; font-weight: bold; }
+
+  .img-placeholder {
+    border: 2px dashed #999;
+    background: #f0f0f0;
+    color: #666;
+    text-align: center;
+    padding: 30px 10px;
+    font-style: italic;
+    font-size: 12px;
+    margin: 14px 0;
+    border-radius: 4px;
+  }
+  .img-caption {
+    font-size: 11px;
+    font-style: italic;
+    text-align: center;
+    color: #555;
+    margin-top: -8px;
+    margin-bottom: 14px;
+  }
+  .footer {
+    position: absolute;
+    bottom: 8mm;
+    right: 16mm;
+    font-size: 10px;
+    color: #888;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PÁGINA 1: PORTADA ================= -->
+<div class="page cover">
+  <div class="banner">
+    <div class="sub">Folleto de Aventura</div>
+    <h1>El Gnomo<br>Evanescente</h1>
+    <div class="level">Una aventura para<br>personajes de Nivel 1</div>
+  </div>
+  <p class="tagline">Esta aventura está diseñada para ocupar una o dos sesiones de juego.<br>
+  Si no usas el mapa de Greyhawkins, puede tener lugar en cualquier mazmorra sombría.</p>
+</div>
+
+<!-- ================= PÁGINA 2: PUNTOS CLAVE + PREP + AYUDA + TRASFONDO ================= -->
+<div class="page">
+  <h2>Puntos clave de la trama</h2>
+  <p>Esta información es clave para la historia de la aventura:</p>
+  <p><strong>Punto de trama 1.</strong> Flizzlebin contacta mágicamente a los personajes y los desafía a encontrarlo en la Mazmorra de las Sombras.</p>
+  <p><strong>Punto de trama 2.</strong> Los personajes recorren la Mazmorra de las Sombras en busca de Flizzlebin, quien les grita desde su escondite en un reflejo retorcido de la mazmorra conectado a un reino misterioso conocido como el Valle de las Sombras.</p>
+  <p><strong>Punto de trama 3.</strong> Un engendro de Demogorgon, un señor demonio, ha escapado del Valle de las Sombras. Los personajes se encuentran por primera vez con la criatura en la Mazmorra de las Sombras, pero es probable que escape.</p>
+  <p><strong>Punto de trama 4.</strong> Después de derrotar al engendro de Demogorgon, los personajes encuentran a Flizzlebin y obtienen la recompensa del gnomo.</p>
+
+  <h2>Preparación del DM</h2>
+  <p>Antes de dirigir la aventura, prepara lo siguiente:</p>
+  <ul class="checklist">
+    <li><strong>Paso 1.</strong> Lee la sección "Trasfondo de la aventura".</li>
+    <li><strong>Paso 2.</strong> Lee la sección "El escondite" y anota en secreto el escondite de Flizzlebin.</li>
+    <li><strong>Paso 3.</strong> Reúne el Folleto de advertencia de la mazmorra y el Mapa de la Mazmorra de las Sombras.</li>
+    <li><strong>Paso 4.</strong> Reúne una ficha de personaje jugador por cada personaje.</li>
+    <li><strong>Paso 5.</strong> Reúne las cartas y fichas de monstruo: 1 Engendro de Demogorgon, 3 Guerreros goblin, Flizzlebin, 2 Adultos micónidos, 1 Araña gigante, 1 Sombra, 3 Guerreros gnoll, 4 Hongos chillonos.</li>
+    <li><strong>Paso 6.</strong> Reúne las cartas de objeto mágico: Gorro de la Desaparición, 2 Pociones de curación, Mayal +1, Varita de los secretos, Lengua de fuego (espada grande).</li>
+  </ul>
+
+  <div class="box note">
+    No dejes que nadie del departamento de policía de Hawkins te atrape con esto. El oficial Callaghan todavía cree que robé todos esos gnomos de jardín que desaparecieron hace unos años. Considera este folleto una prueba.
+  </div>
+
+  <div class="box classified">CLASIFICADO</div>
+
+  <h2>Ayuda a los jugadores</h2>
+  <p>Puedes simplificar el papel del DM haciendo que los demás jugadores se encarguen de tareas típicamente asignadas al DM:</p>
+  <ul>
+    <li><strong>Rastreador de combate.</strong> Un jugador registra condiciones, PG e iniciativa.</li>
+    <li><strong>Encargados de monstruos.</strong> Uno o dos jugadores dirigen a los monstruos hostiles.</li>
+    <li><strong>Consultor de reglas.</strong> Un jugador consulta las reglas en la Guía de juego.</li>
+  </ul>
+
+  <h2>Trasfondo de la aventura</h2>
+  <p>Flizzlebin, el Gnomo Evanescente, pone a prueba el temple de héroes aspirantes en peligrosos juegos de escondite en mazmorras por todo el territorio. A lo largo de los años, el esquivo gnomo ha contactado mágicamente a incontables viajeros, pero pocos han aceptado sus misiones, y menos aún las han completado. Los buscadores exitosos han salido de estas mazmorras con tesoros incalculables y bolsillos rebosantes de oro.</p>
+  <p>Recientemente, Flizzlebin se desvaneció hacia la Mazmorra de las Sombras, un laberinto que bordea un reino sombrío infestado de monstruos. Allí, sus llamados a los aventureros despertaron a una criatura inmunda: ¡un engendro del señor demonio Demogorgon! Mientras Flizzlebin transmite ansiosamente su misión, el demonio hambriento acecha la mazmorra, complicando el juego del gnomo y poniendo en peligro a todos los que lo buscan.</p>
+  <div class="footer">El Gnomo Evanescente · Pág. 2</div>
+</div>
+
+<!-- ================= PÁGINA 3: EL ESCONDITE + INICIO ================= -->
+<div class="page">
+  <h2>1. El escondite</h2>
+  <p>Flizzlebin se esconde en la Mazmorra Sombría, un espejo de la Mazmorra de las Sombras. Tira en la tabla de Escondite de Flizzlebin para determinar dónde pueden encontrar los personajes al gnomo. Flizzlebin evita daños en su escondite usando su Gorro de la Desaparición (ver su Carta de monstruo).</p>
+
+  <h3>Escondite de Flizzlebin</h3>
+  <table>
+    <tr><th>1d6</th><th>Ubicación</th></tr>
+    <tr><td>1</td><td>Cámara de las Malas Elecciones (área S1)</td></tr>
+    <tr><td>2</td><td>Páramo de las Vides Inmundas (área S2)</td></tr>
+    <tr><td>3</td><td>Laberinto de la Penumbra (área S3)</td></tr>
+    <tr><td>4</td><td>Forja de la Aniquilación (área S4)</td></tr>
+    <tr><td>5</td><td>Guarida de Bitsy (área S5)</td></tr>
+    <tr><td>6</td><td>Altar de Vecna (área S6)</td></tr>
+  </table>
+
+  <h2>Comienzo de la aventura</h2>
+  <div class="box read">
+    Viajáis por un camino muy transitado a través de un país escarpado y boscoso. Al pasar junto a un matorral denso, una voz os llama con entusiasmo.<br><br>
+    "¡Bien hallados, aventureros! Soy yo, Flizzlebin, el Gnomo Evanescente, el vagabundo ilustre, ¡el emisario de la evasión! Me he recluido en lo profundo de la fabulosa Mazmorra de las Sombras, donde espero con una recompensa mágica para quienes demuestren ser dignos. Encontradme, y el tesoro será vuestro. Viajad al este para encontrar la entrada de la mazmorra. ¡Cuidaos! Criaturas horribles acechan en los rincones más oscuros de la mazmorra... y yo también." La voz se desvanece. ¿Aceptáis esta misión?
+  </div>
+  <p>A tu discreción, uno o más de los personajes podrían haber oído hablar de Flizzlebin. Si los personajes siguen las instrucciones del gnomo, llegan rápidamente a la Mazmorra de las Sombras.</p>
+
+  <div class="box note">
+    He dirigido esta aventura un montón de veces. De vez en cuando, me encontré con un jugador que ya había jugado la maldita cosa, y tú también lo harás. ¿Mi consejo? <strong>Nunca la dirijas de la misma manera dos veces.</strong> Esconde a Flizzlebin en otro lugar. Añade un par de brotes de vid a la Mazmorra Sombría. Eso mantendrá a todos en alerta y evitará que los bocazas arruinen la diversión para los novatos, y para ellos mismos.
+  </div>
+
+  <div class="img-placeholder">🖼️ [Imagen: Túnel de piedra con rostro aullante rodeado de raíces y zarzas]</div>
+  <p class="img-caption">Un túnel de piedra aullante marca la entrada a la Mazmorra de las Sombras.</p>
+  <div class="footer">El Gnomo Evanescente · Pág. 3</div>
+</div>
+
+<!-- ================= PÁGINA 4: MAZMORRA DE LAS SOMBRAS + D1 ================= -->
+<div class="page">
+  <h2>Mazmorra de las Sombras</h2>
+  <p>La Mazmorra de las Sombras es el puente entre Greyhawkins y el Valle de las Sombras, un mundo espejo en un reino de sombra. Gnolls sedientos de sangre, arácnidos gigantes, trampas mortales y peores terrores esperan a los visitantes.</p>
+  <p>Una versión deformada de la mazmorra se refleja en el Valle de las Sombras. Flizzlebin se esconde dentro de esta sombra de la mazmorra superior, a la que solo se puede acceder a través de portales ocultos.</p>
+
+  <h3>Llegada a la mazmorra</h3>
+  <div class="box read">
+    Llegáis a la entrada de la Mazmorra de las Sombras. Zarzas negras crecen alrededor de la boca de la entrada, que se asemeja a un rostro de piedra aullante. Más allá de la abertura, unas escaleras toscamente talladas descienden hacia la oscuridad.
+  </div>
+  <p>Un personaje puede inspeccionar la entrada y hacer una de las siguientes pruebas:</p>
+  <ul>
+    <li><strong>CD 12 Inteligencia (Historia).</strong> Los monstruos infestan esta mazmorra, imbuida de magia sombría. Fue un templo dedicado a un dios olvidado. Se rumorea que hay una segunda mazmorra más siniestra conectada.</li>
+    <li><strong>CD 12 Inteligencia (Arcano).</strong> La mazmorra está vinculada al Valle de las Sombras, un reflejo sombrío del mundo natural. Criaturas espantosas y sombras vivientes lo habitan.</li>
+  </ul>
+  <p>La escalera desciende 60 pies hasta el área D1. Despliega el Mapa de la Mazmorra de las Sombras y coloca las fichas en esa área.</p>
+
+  <div class="box secret">
+    El mapa póster representa la Mazmorra de las Sombras y su reflejo. Antes de desplegarlo, dóblalo para que la parte de la Mazmorra Sombría quede boca abajo. Cuando los personajes entren en la Mazmorra Sombría, voltea el mapa para revelarla.
+  </div>
+
+  <h3>Características de la mazmorra</h3>
+  <ul>
+    <li><strong>Techos.</strong> 20 pies en habitaciones, 10 pies en pasillos.</li>
+    <li><strong>Puertas y puertas secretas.</strong> Sin cerradura, de basalto. Las secretas son fisuras elásticas y arañosas. Acción de Buscar + Sabiduría (Percepción) CD 15 para notarlas.</li>
+    <li><strong>Iluminación.</strong> Antorchas en soportes de hierro → luz brillante.</li>
+  </ul>
+
+  <h2>Ubicaciones de la mazmorra</h2>
+
+  <h3>D1: Cámara de la Elección</h3>
+  <p>Esta cámara tiene cinco puertas de piedra, cada una con una imagen e inscripción diferentes.</p>
+  <div class="box read">
+    Las antorchas parpadean mientras una voz tenue y descorporizada os llama. "Me complace que hayáis aceptado mi misión", dice Flizzlebin. "Estoy aquí, pero no estoy aquí. Encontradme, y os recompensaré generosamente. ¡Advertidos! No sois las únicas criaturas que me buscan en este lugar maldito." Un rugido monstruoso resuena por toda la mazmorra.
+  </div>
+  <p>Flizzlebin habla desde la Mazmorra Sombría. No dice nada más aquí a menos que tú decidas lo contrario. Ha descubierto que sus comunicaciones atrajeron al engendro de Demogorgon (área D3) y no quiere atraer más su ira.</p>
+  <p><strong>Puertas.</strong> Cada una de las cinco puertas tiene un relieve e inscripción:</p>
+  <ul>
+    <li><strong>Puerta a D2 (Urna).</strong> Imagen de una urna humeante. "Páramo de la Inmundicia".</li>
+    <li><strong>Puerta a D3 (Laberinto).</strong> Minotauro cornudo sobre un laberinto de piedra. "Laberinto de la Perdición".</li>
+    <li><strong>Puerta a D4 (Goblins).</strong> Tres criaturas de orejas puntiagudas rodean un yunque. "Forja de Gibbeltrax".</li>
+    <li><strong>Puerta a D5 (Telaraña).</strong> Telaraña grabada. "Guarida de Itsy".</li>
+    <li><strong>Puerta a D6 (Gnoll).</strong> Guerrero hienoide ceñudo. "Altar de Yeenohu".</li>
+  </ul>
+  <div class="footer">El Gnomo Evanescente · Pág. 4</div>
+</div>
+
+<!-- ================= PÁGINA 5: MAPA + D2 + D3 (INICIO) ================= -->
+<div class="page">
+  <div class="img-placeholder" style="padding: 60px 10px;">
+    🗺️ [MAPA 1: Mazmorra de las Sombras y Mazmorra Sombría — Versión del DM]<br>
+    1 casilla = 5 pies · Incluye fichas de monstruos y ubicaciones D1–D6 / S1–S6
+  </div>
+  <p class="img-caption">Mapa 1: Mazmorra de las Sombras y Mazmorra Sombría (DM)</p>
+
+  <h3>D2: Páramo de la Inmundicia</h3>
+  <p>Un hedor pútrido flota en esta habitación. Huesos roídos, comida podrida y basura antigua cubren el suelo. Contiene desechos de los habitantes de la mazmorra.</p>
+  <p><strong>Tesoro.</strong> Acción de Buscar + Sabiduría (Percepción) CD 12. El primer éxito desentierra cinco urnas de marfil (10 PO cada una). Cuatro vacías; una contiene una Poción de curación y una estatuilla de peltre de un demonio de dos cabezas (90 PO). CD 13 Inteligencia (Religión) → ídolo de Demogorgon.</p>
+
+  <h3>D3: Laberinto de la Perdición</h3>
+  <div class="box read">
+    Las antorchas parpadean y una voz familiar dice: "Muchos aventureros han encontrado su muerte en estos corredores. ¡Cuidado con el temible minotauro!"
+  </div>
+  <p>Hasta hace poco, un minotauro gobernaba este laberinto. El engendro de Demogorgon escapó del Valle de las Sombras y lo mató. Ahora devora su cadáver en el centro.</p>
+  <p><strong>Trampas de lanzas.</strong> Tres trampas activadas por placas de presión (marcadas con "T"). Telarañas y polvo ocultan los agujeros.</p>
+
+  <div class="box note">
+    Este encuentro es bastante duro. Sed benévolos con ellos... a menos que estén siendo unos idiotas, en cuyo caso deberíais darles caña.
+  </div>
+
+  <p><strong>Detectar y desarmar.</strong> Acción de Buscar + Sabiduría (Percepción) CD 15 → detecta agujeros. O acción de Estudiar + Inteligencia (Investigación) CD 15 → detecta placa.</p>
+  <p><strong>Activar.</strong> Al pisar la placa por primera vez en un turno: salvación de Destreza CD 13 o 1d6 de daño perforante. Luego se retrae y restablece.</p>
+
+  <div class="img-placeholder">🖼️ [Ilustración: Engendro de Demogorgon devorando a un minotauro]</div>
+  <p class="img-caption">Un engendro de Demogorgon se alimenta de su última víctima.</p>
+  <div class="footer">El Gnomo Evanescente · Pág. 5</div>
+</div>
+
+<!-- ================= PÁGINA 6: D3 CONT + D4 + D5 ================= -->
+<div class="page">
+  <h3>Terror en el laberinto</h3>
+  <div class="box read">
+    Las antorchas de este corredor manchado de sangre chisporrotean erráticamente. Una criatura delgada y fibrosa de piel grisácea y viscosa y miembros alargados se agacha sobre un minotauro muerto. El cadáver chapotea y cruje de forma inquietante mientras la criatura se da un festín con él. Un pequeño cofre yace junto al minotauro destrozado.
+  </div>
+  <p>El Engendro devora durante 1 minuto o hasta detectar a los personajes. Es Hostil hacia todas las demás criaturas.</p>
+  <p>Para colarse: Destreza (Sigilo) CD 13. Si falla o lo perturban:</p>
+  <div class="box read">
+    La criatura se gira hacia vosotros, y su cabeza sin rostro se abre hacia atrás para revelar cinco pétalos carnosos y dentados alrededor de una boca abierta. Chilla y corre hacia vosotros. ¡Tirad iniciativa!
+  </div>
+  <p>Lucha hasta quedar a 25 PG o menos, luego se retira por la puerta secreta al área S3. Si lo derrotan aquí, la aventura no termina; aún deben encontrar a Flizzlebin.</p>
+  <p>Si no lo perturban, termina su comida y se traslada al área S4.</p>
+  <p><strong>Puerta secreta.</strong> Esquina sureste del laberinto → área S3. Quienes vieron al engendro usarla, la encuentran automáticamente.</p>
+  <p><strong>Tesoro.</strong> El cofre contiene una Varita de los secretos y 25 PO.</p>
+
+  <h3>D4: Forja de Gibbletrax</h3>
+  <p>Martillos resonantes suenan en esta sofocante cámara. Tres herreros goblin se agrupan alrededor de una forja brillante en el centro de la habitación. Los goblins cantan en tonos rasposos mientras trabajan:</p>
+  <div class="box read" style="text-align:center; font-style:italic;">
+    "En lo profundo de la Mazmorra de las Sombras,<br>
+    fortalecemos el acero para matar a las bestias.<br>
+    Boca abajo en el Valle de las Sombras,<br>
+    valientes héroes escudriñan para mantenernos libres."
+  </div>
+  <p>Bendecida por un dios olvidado hace mucho tiempo, la Forja de Gibbletrax es una forja mágica custodiada por tres Guerreros goblin llamados Ble, Gib y Trax. Estos herreros fabrican equipo para defenderse de las amenazas de la mazmorra.</p>
+  <p>Los goblins son inicialmente Amistosos hacia los personajes, pero se defienden si es necesario. Si los personajes se acercan a los goblins pacíficamente, los goblins saludan a los personajes calurosamente y preguntan qué les trae a la mazmorra.</p>
+  <p>Ble, Glib y Trax suelen mantenerse apartados, pero recientemente se enfrentaron a los gnolls del área D6, cuyos rituales profanos amenazan la santidad de la forja. Si los personajes aceptan poner fin a los ritos infames de los gnolls, los goblins prometen imbuir las armas de los personajes con la magia de la forja.</p>
+  <p><strong>Forja de Gibbletrax.</strong> La forja mágica de los goblins puede infundir temporalmente armas y munición con un calor inmenso. Como acción adicional, un personaje puede sumergir un arma o una pieza de munición en la forja, recubriéndola con una capa fina de mineral fundido. Una criatura que reciba daño del arma o munición recubierta de mineral recibe 1d6 de daño de fuego adicional. Una vez recubierta, el arma conserva su calor durante 10 minutos o hasta que se inflija su daño, lo que ocurra primero.</p>
+  <p>Un personaje puede beneficiarse de la Forja de Gibbletrax solo una vez, a menos que los goblins le permitan hacerlo de nuevo. Si los tres goblins son asesinados o la forja es retirada de esta área, su magia deja de funcionar.</p>
+
+  <div class="box note">
+    Claro, estos herreros podrían haber sido enanos, pero eso habría sido <u>ABURRIDO</u>. Cualquiera puede ser herrero, igual que cualquiera puede ser Dungeon Master. ¡Tú puedes hacer esto!
+  </div>
+
+  <h3>D5: Guarida de Itsy</h3>
+  <p>Telarañas gruesas y pegajosas cubren esta cámara antaño regia. Esqueletos envueltos en capullos cuelgan de las telarañas del techo como advertencias siniestras para todos los que entran.</p>
+  <p>Una estatua cubierta de telarañas de un caballero de ocho pies de altura con armadura preside la cámara. Ante ella hay un pedestal de piedra, sobre el cual descansa una reluciente araña de cristal de unos cinco pies de diámetro. Una espada grande ardiente arde dentro del cuerpo de la araña de cristal, proyectando un resplandor naranja cálido sobre el nido enmarañado.</p>
+
+  <div class="box secret">
+    No coloques aún la ficha de la Araña gigante. Este monstruo está escondido.
+  </div>
+
+  <p>Esta habitación es el nido de Itsy, una Araña gigante que se alimenta de cualquiera que entre en su guarida. La araña Hostil se aferra al techo, custodiando la puerta secreta y el tesoro en esta habitación (detallado a continuación). Si un personaje abre la puerta secreta o perturba a la araña de cristal, Itsy comienza el combate.</p>
+
+  <p><strong>Araña de cristal.</strong> La araña de cristal es un objeto Mediano con CA 13, PG 50, Resistencia al daño perforante y cortante, e Inmunidad al daño de veneno y psíquico. Destruir la araña de cristal libera el tesoro en su interior (detallado a continuación).</p>
+
+  <p><strong>Puerta secreta.</strong> Encajada en la pared este de esta habitación hay una puerta secreta (ver "Características de la mazmorra") que conecta con el área S5.</p>
+
+  <p><strong>Estatua.</strong> La estatua representa a un caballero en pose gallarda. Como acción de Estudiar, un personaje puede examinar la estatua y hacer una prueba de Inteligencia (Investigación) CD 12. Si tiene éxito, el personaje se da cuenta de que la base de la estatua es inestable; un empujón significativo podría derribarla.</p>
+
+  <p>Como acción, un personaje a 5 pies o menos de la estatua puede hacer una prueba de Fuerza (Atletismo) CD 10 para derribar la estatua en un espacio a 5 pies o menos de ella, haciéndolo si tiene éxito. Cuando la estatua cae, cada criatura debajo de ella recibe 4d6 de daño contundente y queda Derribada. La estatua se desmorona al impactar, revelando un tesoro escondido en su interior (ver "Tesoro" a continuación).</p>
+
+  <p><strong>Telarañas.</strong> Las áreas llenas de telarañas son terreno difícil.</p>
+
+  <p>Una criatura que entre en un área llena de telarañas por primera vez en un turno o comience su turno allí debe tener éxito en una tirada de salvación de Destreza CD 12 o queda Apresada. Como acción, una criatura Apresada por las telarañas puede intentar escapar de ellas, lográndolo con una prueba exitosa de Fuerza (Atletismo) o Destreza (Acrobacia) CD 12.</p>
+
+  <p>Cada cubo de 5 pies de telarañas tiene CA 10; PG 7; Vulnerabilidad al daño de fuego; e Inmunidad al daño perforante, de veneno y psíquico.</p>
+
+  <div class="footer">El Gnomo Evanescente · Pág. 6</div>
+</div>
+
+<!-- ================= PÁGINA 7: D6 + MAZMORRA SOMBRÍA + ENCONTRAR A FLIZZLEBIN ================= -->
+<div class="page">
+  <h3>D6: Altar de Yeenoghu</h3>
+  <p>En esta cámara cuadrada, tres guerreros hienoides se arrodillan ante un altar que lleva un mayal de aspecto maligno. Dos de las criaturas forcejean maníacamente mientras la tercera —la más sarnosa de las tres, casi sin pelo— canta: "¡Yeenoghu! ¡Escucha nuestra risa y que haya derramamiento de sangre y carnicería!" El mayal brilla con una luz enfermiza.</p>
+  <p>Estos tres Guerreros gnoll adoran a Yeenoghu, un señor demonio despiadado que se deleita con la matanza. Los gnolls Hostiles luchan contra todas las demás criaturas en cuanto las ven.</p>
+  <p><strong>Completar el ritual.</strong> Si los personajes no interrumpen a los gnolls, estos continúan su ritual. Después de 1 minuto, una risa retumbante brota del altar. Cualquier criatura que no sea gnoll en esta área debe hacer una tirada de salvación de Constitución CD 13, recibiendo 1d8 de daño de trueno si falla o la mitad de ese daño si tiene éxito.</p>
+  <p>Después del ritual, los gnolls se marchan a luchar contra los goblins en el área D4. Si los personajes no intervienen, los gnolls dominan a los goblins y la Forja de Giblextrax pierde su magia para siempre.</p>
+  <p><strong>Tesoro.</strong> El mayal del altar es un Mayal +1.</p>
+
+  <h2>Mazmorra Sombría</h2>
+  <p>Bajo la Mazmorra de las Sombras yace la Mazmorra Sombría, un reflejo lúgubre de la mazmorra que bordea el Valle de las Sombras. Aunque sus cámaras reflejan las áreas superiores, sus contenidos difieren, distorsionados por el inquietante reino que bordean.</p>
+
+  <h3>Encontrar a Flizzlebin</h3>
+  <p>Para encontrar a Flizzlebin, los personajes deben derrotar al engendro de Demogorgon y a cualquier criatura Hostil en el escondite de Flizzlebin (ver la sección "El escondite" anterior en esta aventura). Cuando se cumplan ambas condiciones, el gnomo aparece ante los personajes; procede a la conclusión de esta aventura.</p>
+  <p>Si los personajes llegan al escondite de Flizzlebin antes de vencer al engendro de Demogorgon, lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    "¡Ah! ¡Habéis encontrado mi escondite! Pero vuestro trabajo aún no ha terminado", habla una voz familiar. "Para reclamar vuestro premio, debéis matar a la horrenda criatura que me caza."
+  </div>
+  <p>Flizzlebin no otorga su recompensa hasta que los personajes cumplan sus instrucciones. A tu discreción, puede revelar la ubicación del engendro de Demogorgon, probablemente el área S4.</p>
+  <div class="footer">El Gnomo Evanescente · Pág. 7</div>
+</div>
+
+<!-- ================= PÁGINA 8: CARACTERÍSTICAS SOMBRÍA + S1 + S2 + S3 (INICIO) ================= -->
+<div class="page">
+  <h3>Características de la Mazmorra Sombría</h3>
+  <p>La Mazmorra Sombría tiene las siguientes características:</p>
+  <ul>
+    <li><strong>Techos.</strong> Los techos tienen 20 pies de alto en las habitaciones y 10 pies de alto en los pasillos.</li>
+    <li><strong>Iluminación.</strong> La mazmorra no está iluminada. Las descripciones de las áreas asumen que los personajes tienen una fuente de luz u otros medios para ver en la oscuridad. Soportes de hierro desnudos bordean las paredes.</li>
+    <li><strong>Puertas y puertas secretas.</strong> Las puertas están sin cerradura y son de basalto. Las puertas secretas se manifiestan como fisuras elásticas y arañosas que se mezclan con su entorno y exudan tenues rayos de luz natural cuando se abren. Como acción de Buscar, un personaje puede examinar una pared que contenga una puerta secreta y hacer una prueba de Sabiduría (Percepción) CD 15, notándola si tiene éxito.</li>
+  </ul>
+
+  <h2>Ubicaciones de la Mazmorra Sombría</h2>
+  <p>Los personajes pueden entrar y salir de la Mazmorra Sombría a través de la puerta secreta que conecta las áreas D3 y S3 o la puerta secreta que conecta las áreas D5 y S5. Las siguientes ubicaciones están claveadas a la porción invertida del mapa 1.</p>
+
+  <h3>S1: Cámara de las Malas Elecciones</h3>
+  <p>Esta cámara inquietante tiene cinco puertas de piedra, cada una con una imagen e inscripción vil. Un enano muerto está desplomado en un rincón sombrío. El cadáver aferra un trozo rasgado de pergamino en su mano rígida. Cerca del enano, una escalera de piedra bloqueada por escombros asciende hacia la oscuridad.</p>
+  <p>Esta habitación refleja la Cámara de la Elección (área D1). El cadáver es el de un explorador enano que pereció hace cuatro días mientras buscaba a Flizzlebin. El enano fue asesinado por una sombra no muerta.</p>
+  <p>El cuerpo del enano es antinaturalmente delgado, y su ropa parece demasiado grande. Un personaje puede inspeccionar el cadáver y hacer una prueba de Sabiduría (Medicina) CD 12. Si tiene éxito, el personaje discierne que la vida del enano fue drenada por una fuerza sobrenatural.</p>
+  <p>El enano aferra una nota. Si los personajes la retiran del cadáver, entrega a los jugadores el Folleto de advertencia de la mazmorra. Después de que los personajes lean la nota, una Sombra se alza del cadáver del enano y comienza el combate.</p>
+  <p><strong>Puertas.</strong> Cada una de las cinco puertas está adornada con una escultura en relieve y una inscripción de la siguiente manera:</p>
+  <ul>
+    <li><strong>Puerta a S2 (Urna).</strong> Esta puerta lleva la imagen de una urna envuelta en vides negras como la tinta. La inscripción dice "Páramo de las Vides Inmundas".</li>
+    <li><strong>Puerta a S3 (Laberinto).</strong> El relieve de esta puerta representa un laberinto fúngico. La inscripción dice "Laberinto de la Penumbra".</li>
+    <li><strong>Puerta a S4 (Yunque con púas).</strong> En el relieve de esta puerta, una figura sombría se cierne sobre un yunque con púas. La inscripción dice "Forja de la Aniquilación".</li>
+    <li><strong>Puerta a S5 (Telaraña).</strong> Una telaraña negra está grabada en esta puerta. La inscripción dice "Guarida de Bitsy".</li>
+    <li><strong>Puerta a S6 (Mano y ojo).</strong> Una mano desecada sosteniendo un ojo decora esta puerta. Profundos arañazos hacen ilegible la inscripción.</li>
+  </ul>
+  <p><strong>Escalera.</strong> La escalera, bloqueada por escombros, conduce al Valle de las Sombras. Ese reino y sus contenidos están fuera del alcance de esta aventura, pero puedes desarrollarlos como quieras. De lo contrario, la escalera es intransitable.</p>
+
+  <h3>S2: Páramo de las Vides Inmundas</h3>
+  <p>Vides negras y deslizantes se retuercen por el suelo de esta habitación llena de basura.</p>
+  <p>Esta habitación refleja el Páramo de la Inmundicia (área D2). El suelo es terreno difícil.</p>
+  <p><strong>Tesoro.</strong> El primer personaje que registre la basura y tenga éxito en una prueba de Sabiduría (Percepción) CD 12 desentierra cinco urnas agrietadas talladas en granito negro. Las urnas no tienen valor. Cuatro de las urnas están vacías, pero una contiene una Poción de curación y un ojo de cristal con pupila de esmeralda que vale 10 PO.</p>
+
+  <h3>S3: Laberinto de la Penumbra</h3>
+  <p>Nubes de esporas flotan por todo este laberinto de piedra. El laberinto está cubierto de hongos y setas de un pie de altura que brotan de las paredes y el suelo.</p>
+  <p>Este laberinto de piedra refleja el Laberinto de la Perdición (área D3). El laberinto alberga plantas tóxicas y cuatro Hongos chillonos. Dos adultos micónidos Hostiles también deambulan por el laberinto, luchando contra cualquier criatura que no sea planta que encuentren.</p>
+  <p>Si los hongos chillonos suenan, los micónidos investigan la perturbación. Los hongos chillonos no chillan si los micónidos se acercan a 30 pies o menos de ellos.</p>
+  <p><strong>Puerta secreta.</strong> Una puerta secreta (ver "Características de la Mazmorra Sombría") está encajada en la pared cerca de la esquina sureste del laberinto. Conduce al área D3.</p>
+  <p><strong>Trampas de esporas.</strong> El laberinto contiene tres trampas de esporas —bulbos vegetales hinchados que exhalan bocanadas de esporas tóxicas— activadas al pisar placas de presión de setas infladas. Estas trampas están marcadas en el mapa 1 con una "T". Las paredes infestadas de hongos ocultan los bulbos que rocían estas esporas.</p>
+  <p>Cada trampa de esporas tiene las siguientes reglas:</p>
+  <div class="footer">El Gnomo Evanescente · Pág. 8</div>
+</div>
+
+<!-- ================= PÁGINA 9: S3 CONT + S4 + S5 + S6 (INICIO) ================= -->
+<div class="page">
+  <p><strong>Detectar y desarmar.</strong> Como acción de Estudiar, un personaje puede examinar las paredes y hacer una prueba de Inteligencia (Naturaleza) CD 15, identificando los bulbos tóxicos si tiene éxito. Alternativamente, un personaje puede realizar la acción de Estudiar para inspeccionar el suelo y hacer una prueba de Inteligencia (Investigación) CD 15, identificando la placa de presión fúngica si tiene éxito. Cortar los tallos que conectan los bulbos con la placa de presión evita que la trampa se active.</p>
+  <p><strong>Activar la trampa.</strong> Cuando una criatura se mueve sobre una placa de presión por primera vez en un turno, los bulbos rocían esporas tóxicas que llenan un cubo de 5 pies centrado en la placa de presión. Cada criatura en el cubo debe tener éxito en una tirada de salvación de Constitución CD 13 o queda Envenenada durante 1 hora. La trampa se restablece inmediatamente.</p>
+  <p><strong>Tesoro.</strong> Un cofre deteriorado en el centro del laberinto contiene una varita rota y 25 PO. La varita es inútil.</p>
+
+  <div class="img-placeholder">🖼️ [Ilustración: Hongos chillonos con bocas dentadas entre cráneos]</div>
+  <p class="img-caption">Hongos chillonos en el Laberinto de la Penumbra.</p>
+
+  <h3>S4: Forja de la Aniquilación</h3>
+  <p>Una forja impía domina esta sombría cámara. Vapores cáusticos emanan de su hogar helado, que gira con una lechada verde pálida débilmente luminosa. Cráneos flotan en la superficie del líquido.</p>
+  <p>Esta habitación refleja la Forja de Gibbletrax (área D4). Si el engendro de Demogorgon sobrevivió a su encuentro anterior con los personajes (ver área D3), acecha aquí. Lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    Una criatura familiar y horrible —la misma criatura que encontrasteis en el laberinto de arriba— se alza desde la sombra de la forja. Despliega su cabeza sin rostro una vez más y parlotea con anticipación. ¡Tirad iniciativa!
+  </div>
+  <p>El Engendro de Demogorgon lucha hasta la muerte.</p>
+  <p><strong>Forja de la Aniquilación.</strong> A diferencia de la forja bendecida de los goblins en la mazmorra superior, esta forja es un aparato maldito capaz solo de destrucción. La Forja de la Aniquilación hace que las criaturas vivientes se marchiten y mueran. Como acción de Estudiar, un personaje puede inspeccionar la forja y hacer una prueba de Inteligencia (Arcano) CD 13. Si tiene éxito, el personaje identifica el peligro sobrenatural y la amenaza que representa.</p>
+  <p>Una criatura que entre en la forja por primera vez o comience su turno allí debe hacer una tirada de salvación de Constitución CD 15, recibiendo 4d8 de daño necrótico si falla o la mitad de ese daño si tiene éxito.</p>
+
+  <h3>S5: Guarida de Bitsy</h3>
+  <p>Una estatua de un caballero de ocho pies de altura con un yelmo carmesí y cornudo se alza en esta cámara, que está cubierta de gruesas telarañas negras. Sobre un altar en el centro de la habitación, una araña masiva con colmillos goteantes envuelve a un elfo muerto en telarañas.</p>
+  <p>Capullos con forma humanoide —la espantosa despensa de la arácnida— cuelgan por toda la cámara.</p>
+  <p>Esta habitación refleja la Guarida de Itsy (área D5). Pertenece a Bitsy, una Araña gigante igualmente territorial. Bitsy lucha contra los personajes en cuanto los ve.</p>
+  <p><strong>Puerta secreta.</strong> Encajada en la pared este de esta habitación hay una puerta secreta (ver "Características de la Mazmorra Sombría") que conecta con el área D5.</p>
+  <p><strong>Estatua.</strong> La estatua representa a un caballero con un yelmo amenazante. Como acción de Estudiar, un personaje puede examinar la estatua y hacer una prueba de Inteligencia (Investigación) CD 12. Si tiene éxito, el personaje se da cuenta de que la base de la estatua es inestable; un empujón significativo podría derribarla.</p>
+  <p>Como acción, un personaje a 5 pies o menos de la estatua puede hacer una prueba de Fuerza (Atletismo) CD 10 para derribar la estatua en un espacio a 5 pies o menos de ella, haciéndolo si tiene éxito. Cuando la estatua cae, cada criatura debajo de ella recibe 4d6 de daño contundente y queda Derribada. La estatua se desmorona al impactar, revelando un tesoro en su interior (ver "Tesoro" a continuación), pero su yelmo permanece intacto.</p>
+  <p><strong>Telarañas.</strong> Las áreas llenas de telarañas son terreno difícil.</p>
+  <p>Una criatura que entre en un área llena de telarañas por primera vez en un turno o comience su turno allí debe tener éxito en una tirada de salvación de Destreza CD 12 o queda Apresada. Como acción, una criatura Apresada por las telarañas puede intentar escapar de ellas, lográndolo con una prueba exitosa de Fuerza (Atletismo) o Destreza (Acrobacia) CD 12.</p>
+  <p>Cada cubo de 5 pies de telarañas tiene CA 10; PG 7; Vulnerabilidad al daño de fuego; e Inmunidad al daño perforante, de veneno y psíquico.</p>
+  <p><strong>Tesoro.</strong> El yelmo de la estatua es un Yelmo aterrador carmesí que se asemeja a la cabeza de un demonio cornudo. Dentro de la estatua hay una turmalina negra en forma de corazón que vale 30 PO.</p>
+
+  <h3>S6: Altar de Vecna</h3>
+  <p>Una niebla baja impregna esta cámara inquietantemente silenciosa. Un altar de piedra se alza desde el centro del suelo. Sobre el altar, una mano desmembrada aferra un reloj de arena medio lleno de arena negra y adornado con husos de hueso. La arena desafía la gravedad, fluyendo hacia el bulbo superior.</p>
+
+  <div class="footer">El Gnomo Evanescente · Pág. 9</div>
+</div>
+
+<!-- ================= PÁGINA 10: S6 CONT + CONCLUSIÓN + AVANCE ================= -->
+<div class="page">
+  <div class="img-placeholder" style="padding: 50px 10px;">
+    🖼️ [Ilustración: La Forja de la Aniquilación — rostro demoníaco de piedra con caldero de metal y púas]
+  </div>
+  <p class="img-caption">La Forja de la Aniquilación —un reflejo siniestro de la Forja de Gibbletrax— se cierne en la Mazmorra Sombría.</p>
+
+  <p>Esta habitación refleja el Altar de Yeenoghu (área D6), pero este altar honra un mal de calibre más vil.</p>
+  <p>El primer personaje que inspeccione el reloj de arena escucha el sonido de un reloj haciendo tic-tac, seguido de una campana siniestra. El reloj de arena entonces se agrieta, y la arena se derrama, revelando un ojo momificado dentro del bulbo inferior. Ningún otro personaje escucha el sonido.</p>
+  <p>Después, un personaje puede examinar el contenido del altar y hacer una prueba de Inteligencia (Religión) CD 12. Si tiene éxito, el personaje reconoce la mano y el ojo como el símbolo de Vecna, un poderoso lich temido en todo Greyhawkins. El reloj de arena es un objeto ceremonial usado por miembros del culto de Vecna para simbolizar el regreso temido —e inevitable— del lich.</p>
+
+  <h2>Conclusión</h2>
+  <p>Después de que los personajes derroten al engendro de Demogorgon y localicen a Flizzlebin, el gnomo los recompensa. Lee o parafrasea lo siguiente:</p>
+  <div class="box read">
+    Un gnomo barbudo con un gorro elegante se dirige a vosotros con entusiasmo. "¡Valentía, majestuosidad y trabajo en equipo!", exclama. "Qué maravilloso fue guiaros en vuestra misión". Se quita el gorro.<br><br>
+    "Por vuestro heroísmo, os concedo mi gorro mágico. Pero sabed esto: los verdaderos tesoros fueron los vínculos que formasteis en el camino.<br><br>
+    "¡Adelante! Muchas grandes aventuras os esperan."
+  </div>
+  <p>Por sus esfuerzos, Flizzlebin entrega a los personajes su <strong>Gorro de la Desaparición</strong>. Si uno de los personajes no encontró un objeto mágico durante la aventura, el gnomo le presenta el gorro a ese personaje.</p>
+  <p>Flizzlebin es Amistoso y está dispuesto a hablar con los personajes. Durante la conversación, recuerda con cariño las hazañas de los personajes y los elogia por su creatividad, heroísmo o cualquier otra cualidad que consideres apropiada. Luego se despide de ellos y se desvanece una vez más, desapareciendo hacia una mazmorra lejana para desafiar a un nuevo grupo de aventureros.</p>
+
+  <h2>Avance de personaje</h2>
+  <p>Después de que los personajes reciban la recompensa de Flizzlebin, todos en el grupo ganan <strong>1 nivel</strong>. Entrega a cada jugador la Hoja de personaje de nivel 2 para su personaje y haz que registren cualquier tesoro que encontraron durante esta aventura en el reverso de esa hoja.</p>
+  <p style="font-style:italic; color:#555;">Puedes traer de vuelta a Flizzlebin la próxima vez que quieras enviar a los personajes a una mazmorra o recompensar a un jugador con un objeto del que te haya estado molestando. El mío es el peor con el "¡Eddie! ¿Cuándo vamos a subir de nivel?" "¡Eddie! ¿Cuándo consigo una Espada Vorgel?" "Insoportable. Hazle trabajar por ello."</p>
+  <div class="footer">El Gnomo Evanescente · Pág. 10 · FIN</div>
+</div>
+
+<!-- Navegación por secciones para el Asistente de combate (no cambia el contenido) -->
+<script src="navegacion.js"></script>
+</body>
+</html>

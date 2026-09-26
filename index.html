@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asistente de Combate</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- ============ IZQUIERDA: HISTORIA ============ -->
+    <section class="col col-historia" id="colHistoria" aria-label="Historia">
+      <header class="col-header col-header-historia">
+        <h2>Historia</h2>
+        <select id="selSeccion" class="sel-seccion" aria-label="Ir a la sección" disabled>
+          <option>Cargando secciones…</option>
+        </select>
+        <div class="col-actions">
+          <button class="btn-icon" id="btnRecargarHistoria" title="Recargar historia" aria-label="Recargar historia">⟳</button>
+          <button class="btn-icon" id="btnOcultarHistoria" title="Ocultar historia" aria-label="Ocultar historia">⟨</button>
+        </div>
+        <nav class="saltos" id="saltos" aria-label="Saltos rápidos a las áreas"></nav>
+        <div class="sonidos-barra" id="sonidosBarra" aria-label="Sonidos de la sección"></div>
+      </header>
+      <div class="col-body col-body-historia">
+        <iframe id="frameHistoria" src="historia/historia.html" title="Historia de la campaña"></iframe>
+      </div>
+    </section>
+
+    <!-- Separador arrastrable -->
+    <div class="splitter" id="splitter" role="separator" aria-orientation="vertical"
+         aria-label="Redimensionar columnas" tabindex="0"></div>
+
+    <!-- Pestaña para volver a mostrar la historia cuando está oculta -->
+    <button class="historia-reabrir" id="btnMostrarHistoria" title="Mostrar historia" aria-label="Mostrar historia">
+      <span>Historia</span> ⟩
+    </button>
+
+    <!-- ============ DERECHA: COMBATE ============ -->
+    <section class="col col-combate" aria-label="Asistente de combate">
+      <header class="col-header">
+        <h2>Asistente de combate</h2>
+        <nav class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="preparar" id="tab-preparar" aria-controls="panel-preparar">Preparar</button>
+          <button class="tab" role="tab" data-tab="combate" id="tab-combate" aria-controls="panel-combate">Combate</button>
+          <button class="tab" role="tab" data-tab="objetos" id="tab-objetos" aria-controls="panel-objetos">Objetos</button>
+        </nav>
+      </header>
+
+      <div class="col-body">
+        <!-- PREPARAR -->
+        <div class="panel" role="tabpanel" id="panel-preparar" aria-labelledby="tab-preparar"></div>
+
+        <!-- COMBATE -->
+        <div class="panel" role="tabpanel" id="panel-combate" aria-labelledby="tab-combate"></div>
+
+        <!-- OBJETOS -->
+        <div class="panel" role="tabpanel" id="panel-objetos" aria-labelledby="tab-objetos"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Datos -->
+  <script src="data/personajes.js"></script>
+  <script src="data/armas.js"></script>
+  <script src="data/hechizos.js"></script>
+  <script src="data/buffs.js"></script>
+  <script src="data/enemigos.js"></script>
+  <script src="data/partidas.js"></script>
+  <script src="data/objetos.js"></script>
+  <script src="data/sonidos.js"></script>
+
+  <!-- Lógica -->
+  <script src="js/reglas.js"></script>
+  <script src="js/estado.js"></script>
+  <script src="js/dados.js"></script>
+  <script src="js/recursos.js"></script>
+  <script src="js/objetos.js"></script>
+  <script src="js/preparar.js"></script>
+  <script src="js/acciones.js"></script>
+  <script src="js/combate.js"></script>
+  <script src="js/sonidos.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
