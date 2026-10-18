@@ -164,5 +164,75 @@ window.DATA_HECHIZOS = [
     concentracion: false, duracionRondas: 10,
     efectoPorTurno: { dano: "1d6", tipoDano: "fuego", salvacion: "CON", terminaAlSalvar: true },
     texto: "Al golpear: +1d6 de fuego. Al inicio de cada turno del objetivo: 1d6 de fuego y salvación de CON; si la supera, termina."
+  },
+  {
+    id: "castigo_divino", nombre: "Castigo divino", en: "Divine Smite",
+    nivel: 1, clases: ["Paladín"],
+    tiempo: "acción adicional (justo tras golpear)", alcance: "personal",
+    resolucion: "castigo", disparador: "golpe cuerpo a cuerpo con arma o sin armas",
+    danoExtra: "2d8", danoExtraInfernal: "3d8", tipoDano: "radiante",
+    concentracion: false,
+    texto: "Al golpear: +2d8 radiante (+1d8 si el objetivo es infernal o muerto viviente)."
+  },
+  {
+    id: "favor_divino", nombre: "Favor divino", en: "Divine Favor",
+    nivel: 1, clases: ["Paladín"],
+    tiempo: "acción adicional", alcance: "personal",
+    resolucion: "buff", aplicaBuff: "favor_divino",
+    concentracion: false, duracionRondas: 10,
+    texto: "Durante 1 min, tus ataques con arma hacen +1d4 radiante al golpear."
+  },
+  {
+    id: "manos_ardientes", nombre: "Manos ardientes", en: "Burning Hands",
+    nivel: 1, clases: ["Mago"],
+    tiempo: "acción", alcance: "personal (cono de 15 ft)", area: "cono de 15 ft",
+    resolucion: "salvacion", salvacion: "DES", alSalvar: "mitad",
+    dano: "3d6", tipoDano: "fuego",
+    concentracion: false,
+    texto: "Cono de 15 ft: salvación de DES o 3d6 de fuego (mitad si supera). Prende objetos inflamables no sujetos."
+  },
+  {
+    id: "escudo", nombre: "Escudo", en: "Shield",
+    nivel: 1, clases: ["Mago"],
+    tiempo: "reacción", alcance: "personal",
+    resolucion: "reaccion", concentracion: false,
+    texto: "Reacción cuando te golpea un ataque o te apunta Proyectil mágico: +5 a la CA (también contra ese ataque) hasta el inicio de tu siguiente turno, e inmune a Proyectil mágico. Se marca dentro del ataque enemigo."
+  },
+  {
+    id: "detectar_bien_mal", nombre: "Detectar el bien y el mal", en: "Detect Evil and Good",
+    nivel: 1, clases: ["Clérigo", "Paladín"],
+    tiempo: "acción", alcance: "personal (30 ft)",
+    resolucion: "utilidad", concentracion: true, duracionRondas: 100,
+    texto: "Durante 10 min sabe dónde hay aberraciones, celestiales, elementales, feéricos, infernales o muertos vivientes a 30 ft, y lugares u objetos consagrados o profanados. La bloquean 1 ft de piedra o tierra, 1 pulgada de metal o una lámina de plomo."
+  },
+
+  // ---------------- Canalizar divinidad (clérigo nv 2) ----------------
+  // No gastan espacio: gastan un uso del recurso usaRecurso. Acción Magia.
+  {
+    id: "chispa_divina_curar", nombre: "Chispa divina · curar", en: "Divine Spark",
+    nivel: 0, clases: [], usaRecurso: "canalizar_divinidad",
+    tiempo: "acción", alcance: "30 ft",
+    resolucion: "curacion", curacion: "1d8", sumaModConjuro: true,
+    concentracion: false,
+    texto: "Canalizar divinidad: una criatura que vea a 30 ft recupera 1d8 + SAB PG."
+  },
+  {
+    id: "chispa_divina_danar", nombre: "Chispa divina · dañar", en: "Divine Spark",
+    nivel: 0, clases: [], usaRecurso: "canalizar_divinidad",
+    tiempo: "acción", alcance: "30 ft",
+    resolucion: "salvacion", salvacion: "CON", alSalvar: "mitad",
+    dano: "1d8", sumaModConjuro: true, tipoDano: "radiante",
+    concentracion: false,
+    texto: "Canalizar divinidad: una criatura que vea a 30 ft hace salvación de CON o recibe 1d8 + SAB radiante o necrótico (a elegir; aquí radiante); mitad si supera."
+  },
+  {
+    id: "expulsar_muertos", nombre: "Expulsar muertos vivientes", en: "Turn Undead",
+    nivel: 0, clases: [], usaRecurso: "canalizar_divinidad",
+    tiempo: "acción", alcance: "30 ft", area: "muertos vivientes a 30 ft",
+    resolucion: "salvacion", salvacion: "SAB", alSalvar: "nada", soloTipos: ["muerto viviente"],
+    aplicaCondicion: ["Asustado", "Incapacitado"],
+    efectoAlFallar: "Asustado e Incapacitado 1 min: se aleja de ti lo que pueda. Termina si recibe daño, si quedas Incapacitado o si mueres.",
+    concentracion: false,
+    texto: "Canalizar divinidad: cada muerto viviente a 30 ft que elijas hace salvación de SAB o queda Asustado e Incapacitado 1 min (termina si recibe daño)."
   }
 ];

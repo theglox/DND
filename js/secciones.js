@@ -119,6 +119,7 @@ window.Secciones = (function () {
         if (p.tipo === "salvacion" && p.dano && (!supera || p.alSalvar === "mitad")) {
           resultado += renderDano(est, pj, p, i, supera);
         }
+        if (p.tipo === "prueba" && !supera && pj.menteTactica) resultado += renderMenteTactica(est, pj, p, i, total);
       }
       cuerpo = `
         <div class="fila-tirada sin-borde prueba-controles">
@@ -139,6 +140,28 @@ window.Secciones = (function () {
         <div class="prueba-titulo">${titulo}${p.accion ? ` <span class="chip">acción ${esc(p.accion)}</span>` : ""}
           <span class="sub">${esc(p.texto)}</span></div>
         ${cuerpo}
+      </div>`;
+  }
+
+  // Mente táctica (guerrero nv 2): tras fallar una prueba, +1d10; solo gasta Tomar aliento si así la supera
+  function renderMenteTactica(est, pj, p, i, total) {
+    const t = tiradas[i];
+    const quedan = Recursos.restante(est, pj, "tomar_aliento");
+    const nuevo = t.tactica != null ? total + t.tactica : null;
+    let estado = "";
+    if (t.tacticaGastada) {
+      estado = `<div class="banner golpe">✔ Supera con Mente táctica (${nuevo} vs CD ${p.cd})${p.exito ? ": " + esc(p.exito) : ""} · gastó 1 Tomar aliento</div>`;
+    } else if (nuevo != null) {
+      estado = nuevo >= p.cd
+        ? `<span class="sub">${total} + ${t.tactica} = <b>${nuevo}</b> → ¡supera!</span>
+           <button class="btn btn-sm btn-primary" data-accion="pr-tactica" data-i="${i}">Aplicar (gasta 1 Tomar aliento)</button>`
+        : `<span class="sub">${total} + ${t.tactica} = <b>${nuevo}</b> → sigue fallando: no se gasta el uso.</span>`;
+    }
+    return `
+      <div class="grupo-dados mente-tactica">
+        <span class="grupo-etiqueta">🧠 Mente táctica · +1d10 (Tomar aliento ${quedan}/${Recursos.total(pj, "tomar_aliento")})</span>
+        ${quedan || t.tacticaGastada ? `<div class="dados">${D.casillero({ key: `pmt|${i}|0`, caras: 10, valor: t.tactica })}</div>${estado}`
+          : `<span class="sub">Sin usos de Tomar aliento.</span>`}
       </div>`;
   }
 
@@ -284,6 +307,7 @@ window.Secciones = (function () {
     const t = tiradas[i];
     if (!t) return;
     if (tipo === "pr") D.guardarEnTirada(t, idx, valor);
+    else if (tipo === "pmt") { if (!t.tacticaGastada) t.tactica = valor; }
     else t.dano[Number(idx)] = valor;
     mensaje = null;
     const key = input.dataset.key;
@@ -323,6 +347,14 @@ window.Secciones = (function () {
     const datos = datosSeccion();
     if (accion === "pr-aplicar") {
       aplicarDano(Number(i));
+    } else if (accion === "pr-tactica") {
+      const t = tiradas[i];
+      const pj = porId(PJS, t.pjId);
+      if (!t.tacticaGastada) {
+        Estado.actualizar((est) => Recursos.gastar(est, pj, "tomar_aliento"));
+        t.tacticaGastada = true;
+        if (window.Preparar) Preparar.render();
+      }
     } else if (accion === "bt-recoger") {
       const pj = porId(PJS, raiz.querySelector(`[data-ref="bt-pj-${i}"]`).value);
       Estado.actualizar((est) => { mensaje = recoger(est, datos.botin[i], Number(i), pj); });

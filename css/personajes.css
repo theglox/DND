@@ -1,0 +1,214 @@
+/* Hojas de personaje para los jugadores (personajes.html). Mismo tono que el asistente. */
+:root {
+  --bg: #16130f;
+  --surface: #211c16;
+  --surface-2: #2a241c;
+  --border: #3a3126;
+  --border-strong: #4a3f30;
+  --text: #ece3d2;
+  --muted: #a89980;
+  --accent: #c9953c;
+  --magia: #9d7fe0;
+  --ok: #6f9a5a;
+  --danger: #c0503f;
+  --radius: 10px;
+  --font-title: "Georgia", "Palatino Linotype", serif;
+  --font-body: system-ui, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 { font-family: var(--font-title); font-weight: normal; margin: 0; }
+h4 { color: var(--accent); margin: 16px 0 8px; font-size: 1rem; }
+.sub { color: var(--muted); font-size: .85em; }
+b { color: #fff3dc; }
+
+/* ---------- Cabecera y pestañas ---------- */
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 12px 16px 0;
+}
+.cabecera-fila { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.cabecera h1 { font-size: 1.4rem; color: var(--accent); }
+
+.pestanas {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin-top: 10px;
+  scrollbar-width: thin;
+}
+.pestanas a {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 8px 8px 0 0;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-bottom: 0;
+}
+.pestanas a:hover { color: var(--text); }
+.pestanas a[aria-current="page"] {
+  color: var(--text);
+  background: var(--bg);
+  border-color: var(--border-strong);
+}
+
+/* ---------- Hoja ---------- */
+main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+
+.encabezado h2 { font-size: 2rem; color: var(--accent); }
+.encabezado .linea { margin: 4px 0 0; font-size: 1.05rem; }
+.encabezado .sub { margin: 2px 0 0; }
+
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+.caja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+.caja-titulo { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.caja-valor { font-family: var(--font-title); font-size: 1.9rem; color: #fff3dc; line-height: 1.1; }
+.caja-pie { font-size: .78rem; color: var(--muted); }
+
+.bloque {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+.bloque h3 { font-size: 1.2rem; margin-bottom: 8px; color: var(--accent); }
+.bloque ul { margin: 0; padding-left: 20px; }
+.bloque li { margin-bottom: 4px; }
+.ayuda { margin: 0 0 10px; font-size: .88rem; color: var(--muted); }
+.nota { margin: 10px 0 0; font-size: .92rem; }
+.aviso { color: var(--danger); }
+
+.consejos { border-left: 4px solid var(--accent); }
+
+.dos-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+.dos-columnas .bloque { margin-bottom: 0; }
+.dos-columnas + .bloque, .dos-columnas { margin-bottom: 14px; }
+
+/* ---------- Características ---------- */
+.atributos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.atributo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+.atributo.competente { border-color: var(--accent); }
+.atr-nombre { font-size: .78rem; color: var(--muted); }
+.atr-mod { font-family: var(--font-title); font-size: 1.7rem; color: #fff3dc; line-height: 1.1; }
+.atr-valor { font-size: .8rem; color: var(--muted); }
+.atr-salv { font-size: .78rem; margin-top: 4px; }
+.atributo.competente .atr-salv { color: var(--accent); }
+
+/* ---------- Habilidades ---------- */
+.habilidades { list-style: none; padding: 0 !important; columns: 2; column-gap: 18px; }
+.habilidades li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  border-bottom: 1px dotted var(--border);
+  break-inside: avoid;
+}
+.habilidades li.competente span:first-child, .habilidades li.competente b { color: var(--accent); }
+
+/* ---------- Tablas ---------- */
+.tabla-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: normal; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+td.num { font-family: var(--font-title); font-size: 1.2rem; white-space: nowrap; }
+
+/* ---------- Magia ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--magia);
+  font-size: .85rem;
+}
+.hechizos, .rasgos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.hechizo, .rasgo {
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.hechizo { border-left: 3px solid var(--magia); }
+.rasgo.combate { border-left: 3px solid var(--danger); }
+.rasgo.magico { border-left: 3px solid var(--accent); }
+.hechizo p, .rasgo p { margin: 6px 0 0; font-size: .9rem; }
+.hechizo-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-size: .78rem; color: var(--muted); }
+.etiqueta {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: .72rem;
+  background: var(--accent);
+  color: #1b150d;
+  vertical-align: middle;
+}
+.hechizo .etiqueta { background: var(--magia); }
+
+/* ---------- Equipo ---------- */
+.inventario { list-style: none; padding: 0 !important; }
+.inventario li {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  border-bottom: 1px dotted var(--border);
+}
+.recursos { margin-top: 4px; }
+
+.guia .condiciones li { margin-bottom: 6px; }
+
+@media (max-width: 560px) {
+  .encabezado h2 { font-size: 1.6rem; }
+  .habilidades { columns: 1; }
+  .atributos { grid-template-columns: repeat(2, 1fr); }
+}

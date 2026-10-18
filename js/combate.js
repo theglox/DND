@@ -231,7 +231,7 @@ window.Combate = (function () {
         <summary><h3>Refuerzos</h3><span class="sub">añadir enemigos a mitad del combate</span></summary>
         <div class="fila" style="margin-top:10px">
           <select data-accion="ref-enemigo">
-            ${ENEMIGOS.map((e) => `<option value="${esc(e.id)}" ${e.id === refuerzo.enemigoId ? "selected" : ""}>${esc(e.nombre)} (Ini ${R.signo(R.iniciativa(e))})</option>`).join("")}
+            ${R.opcionesEnemigos(ENEMIGOS, (e) => `<option value="${esc(e.id)}" ${e.id === refuerzo.enemigoId ? "selected" : ""}>${esc(e.nombre)} (Ini ${R.signo(R.iniciativa(e))})</option>`)}
           </select>
           <input type="number" min="1" max="30" value="${refuerzo.cantidad}" data-accion="ref-cantidad" class="input-num" aria-label="Cantidad">
         </div>

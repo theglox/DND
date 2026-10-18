@@ -26,6 +26,46 @@ window.DATA_OBJETOS = [
     texto: "Acción Magia: gasta 1 carga; si hay una puerta secreta o una trampa a 60 ft, la varita vibra y apunta a la más cercana."
   },
   {
+    id: "gorro_desaparicion", nombre: "Gorro de la Desaparición", en: "Cap of Vanishing",
+    tipo: "maravilloso",
+    rareza: "poco común", sintonizacion: true,
+    cargas: 3, recargaTotal: true, recarga: "todas al amanecer",
+    invisibilidad: { tiempo: "acción Magia", duracion: "10 minutos" },
+    texto: "3 cargas (todas vuelven al amanecer). Acción Magia y 1 carga: quedas Invisible 10 minutos. Termina antes si te quitas el gorro, o justo después de hacer una tirada de ataque, causar daño o lanzar un conjuro. Requiere sintonización."
+  },
+
+  // ---------- Libro 2 · Grito de la Cosecha (nivel 2) ----------
+  {
+    id: "dardo_mas1", nombre: "Dardo +1", en: "+1 Dart",
+    tipo: "arma", armaBase: "dardo",
+    rareza: "poco común", sintonizacion: false,
+    bonusAtaque: 1, bonusDano: 1,
+    texto: "Arma sencilla a distancia (sutil, arrojadiza 20/60): +1 a las tiradas de ataque y de daño. Maestría: Fastidiar."
+  },
+  {
+    id: "kukri_veneno", nombre: "Kukri empapado en veneno", en: "Poison-Soaked Kukri",
+    tipo: "arma", armaBase: "daga",
+    rareza: "poco común", sintonizacion: true,
+    veneno: { cd: 13, salvacion: "CON", dano: "2d8", tipoDano: "veneno", condicion: "Envenenado" },
+    texto: "Daga (sutil, ligera, arrojadiza 20/60). Acción adicional, 1 vez hasta el amanecer: cubre la hoja de veneno durante 1 min o hasta que golpee. La criatura golpeada hace salvación de CON CD 13 o recibe 2d8 de veneno y queda Envenenada 1 min. Maestría: Mella. Requiere sintonización."
+  },
+  {
+    id: "periapto_salud", nombre: "Periapto de salud", en: "Periapt of Health",
+    tipo: "maravilloso",
+    rareza: "poco común", sintonizacion: true,
+    curacion: "2d4+2", tiempo: "acción Magia", usoDiario: true, soloPropio: true,
+    ventajaSalvacionContra: ["Envenenado"],
+    texto: "Acción Magia, 1 vez hasta el amanecer: recupera 2d4 + 2 PG. Mientras lo lleve, ventaja en salvaciones para evitar o terminar Envenenado. Requiere sintonización."
+  },
+  {
+    id: "pocion_resistencia_acido", nombre: "Poción de resistencia (ácido)", en: "Potion of Resistance (Acid)",
+    tipo: "pocion",
+    rareza: "poco común", sintonizacion: false,
+    tiempo: "acción adicional", aplicaBuff: "resistencia_acido",
+    texto: "Acción adicional: bébela o dásela a una criatura a 5 ft. Resistencia al daño de ácido durante 1 hora."
+  },
+
+  {
     id: "pocion_curacion", nombre: "Poción de curación", en: "Potion of Healing",
     tipo: "pocion",
     rareza: "común", sintonizacion: false,

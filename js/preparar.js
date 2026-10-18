@@ -130,7 +130,7 @@ window.Preparar = (function () {
   function varitaPorRecargar(est) {
     return (est.botin || []).find((it) => {
       const o = Objetos.objetoDe(it);
-      return o && o.cargas != null && it.cargas < o.cargas;
+      return o && o.cargas != null && !o.recargaTotal && it.cargas < o.cargas;
     });
   }
 
@@ -268,7 +268,9 @@ window.Preparar = (function () {
     const idsPreparados = Recursos.preparadosDe(est, pj.id);
     const preparados = idsPreparados.map((id) => porId(HECHIZOS, id)).filter(Boolean);
     const disponibles = hechizosPreparables(pj).filter((h) => !idsPreparados.includes(h.id));
-    const lleno = pj.maxPreparados != null && idsPreparados.length >= pj.maxPreparados;
+    const siempre = pj.siemprePreparados || [];       // no cuentan para el máximo
+    const contados = idsPreparados.filter((id) => !siempre.includes(id)).length;
+    const lleno = pj.maxPreparados != null && contados >= pj.maxPreparados;
     const lanzador = Boolean(pj.espaciosConjuro && pj.espaciosConjuro[1]);
     const cd = R.cdConjuro(pj);
 
@@ -308,12 +310,14 @@ window.Preparar = (function () {
 
         ${lanzador ? `
           <h4>Hechizos preparados en esta partida
-            ${pj.maxPreparados != null ? `<span class="contador-prep ${lleno ? "lleno" : ""}">${idsPreparados.length}/${pj.maxPreparados}</span>` : ""}
+            ${pj.maxPreparados != null ? `<span class="contador-prep ${lleno ? "lleno" : ""}">${contados}/${pj.maxPreparados}</span>` : ""}
           </h4>
           ${!est.partidaId
             ? `<p class="muted">Elige una partida arriba.</p>`
             : `<div class="chips">
-                ${preparados.map((h) => `<span class="chip" title="${esc(h.texto)}">${esc(h.nombre)}
+                ${preparados.map((h) => siempre.includes(h.id)
+                  ? `<span class="chip" title="${esc(h.texto)}">${esc(h.nombre)} <span class="sub">(siempre)</span></span>`
+                  : `<span class="chip" title="${esc(h.texto)}">${esc(h.nombre)}
                   <button class="chip-x" data-accion="quitar-hechizo" data-pj="${esc(pj.id)}" data-id="${esc(h.id)}" aria-label="Quitar">×</button></span>`).join("")
                   || `<span class="muted">Ninguno.</span>`}
               </div>
@@ -349,8 +353,8 @@ window.Preparar = (function () {
   }
 
   function renderEnemigos(est) {
-    const opciones = ENEMIGOS.map((e) =>
-      `<option value="${esc(e.id)}">${esc(e.nombre)} (VD ${esc(e.vd)})</option>`).join("");
+    const opciones = R.opcionesEnemigos(ENEMIGOS, (e) =>
+      `<option value="${esc(e.id)}">${esc(e.nombre)} (VD ${esc(e.vd)})</option>`);
     return `
       <div class="card">
         <h3>Enemigos</h3>
@@ -401,7 +405,7 @@ window.Preparar = (function () {
     if (a.cd != null) partes.push(`Salvación de <b>${esc(a.salvacion)} CD ${a.cd}</b>${a.alcance ? ", " + esc(a.alcance) : ""}.`);
     if (a.dano) {
       const extras = (a.danoExtra || []).map((d) => ` + ${esc(d.dado)} ${esc(d.tipo)}`).join("");
-      partes.push(`Daño <b>${esc(a.dano)}</b> ${esc(a.tipoDano)}${extras}.`);
+      partes.push(`Daño <b>${esc(a.dano)}</b> ${esc(a.tipoDano)}${extras}${a.alSalvar === "mitad" ? " (mitad si supera)" : ""}.`);
     }
     if (a.extraConVentaja) partes.push(`+${esc(a.extraConVentaja.dado)} ${esc(a.extraConVentaja.tipo)} si tenía ventaja.`);
     if (a.efectoAlGolpear) partes.push(esc(a.efectoAlGolpear));
@@ -477,6 +481,8 @@ window.Preparar = (function () {
       Estado.actualizar((est) => {
         est.partidaId = partida ? partida.id : null;
         est.preparados = partida ? JSON.parse(JSON.stringify(partida.preparados || {})) : {};
+        // Partida que empieza con el inventario de la ficha (p. ej. libro 2, tras lo gastado en el libro 1)
+        if (partida && partida.inventarioDeFicha && est.botinPartida !== partida.id) delete est.inventario;
         Objetos.asegurarBotin(est);
       });
       render();

@@ -101,8 +101,20 @@ window.Reglas = (function () {
     return pj.competencia + mod(pj.atributos[pj.atributoConjuro]);
   }
 
+  // <option> de enemigos agrupadas por libro (enemigo.libro; sin libro → libro 1)
+  function opcionesEnemigos(enemigos, opcion) {
+    const libros = window.DATA_LIBROS || [];
+    const grupos = {};
+    enemigos.forEach((e) => (grupos[e.libro || "libro1"] = grupos[e.libro || "libro1"] || []).push(e));
+    const ids = Object.keys(grupos);
+    if (ids.length < 2) return enemigos.map(opcion).join("");
+    const etiqueta = (id) => String((libros.find((l) => l.id === id) || { titulo: id }).titulo)
+      .replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    return ids.map((id) => `<optgroup label="${etiqueta(id)}">${grupos[id].map(opcion).join("")}</optgroup>`).join("");
+  }
+
   return {
     ATRIBUTOS, mod, signo, parseDados, carasDe, atributoArma, competente, ataqueArma, aplicarDefensas,
-    salvacion, salvacionEnemigo, iniciativa, cdConjuro, ataqueConjuro
+    salvacion, salvacionEnemigo, iniciativa, cdConjuro, ataqueConjuro, opcionesEnemigos
   };
 })();

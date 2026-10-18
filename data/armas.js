@@ -112,6 +112,16 @@ window.DATA_ARMAS = [
     alcance: "5 ft"
   },
   {
+    id: "dardo", nombre: "Dardo", en: "Dart",
+    categoria: "sencilla",
+    tipo: "distancia", atributo: "sutil",
+    dano: "1d4", tipoDano: "perforante",
+    bonusAtaque: 0, bonusDano: 0,
+    propiedades: ["sutil", "arrojadiza"],
+    maestria: "Fastidiar", maestriaEn: "Vex",
+    distancia: "20/60"
+  },
+  {
     id: "maza", nombre: "Maza", en: "Mace",
     categoria: "sencilla",
     tipo: "cuerpo a cuerpo", atributo: "FUE",

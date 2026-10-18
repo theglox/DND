@@ -162,7 +162,7 @@ window.DATA_SECCIONES = {
   libro2: {
     "la-peticion-de-rillard": {
       botin: [
-        { nombre: "Kukri empapado en veneno", detalle: "Préstamo de Rillard; se lo quedan al final de la aventura" }
+        { nombre: "Kukri empapado en veneno", objetoId: "kukri_veneno", detalle: "Préstamo de Rillard; se lo quedan al final de la aventura" }
       ]
     },
     "caracteristicas-de-los-tuneles": {
@@ -192,7 +192,7 @@ window.DATA_SECCIONES = {
           condicion: "Envenenado", fallo: "Envenenado 1 minuto; repite la salvación al final de cada turno.", exito: "Inmune a estas esporas durante 24 horas." }
       ],
       botin: [
-        { nombre: "Periapto de salud", detalle: "El colgante que cuelga del techo" }
+        { nombre: "Periapto de salud", objetoId: "periapto_salud", detalle: "El colgante que cuelga del techo" }
       ]
     },
     "t4": {
@@ -207,7 +207,7 @@ window.DATA_SECCIONES = {
       botin: [
         { nombre: "Saco de arpillera «R.J.»", detalle: "Un pan de dos días y tres manzanas" },
         { nombre: "Monedas de oro", oro: 5, detalle: "En el saco" },
-        { nombre: "Poción de resistencia (ácido)", detalle: "En el saco" }
+        { nombre: "Poción de resistencia (ácido)", objetoId: "pocion_resistencia_acido", detalle: "En el saco" }
       ],
       notas: "El suelo está 10 ft más bajo que los túneles que llegan (caída de 10 ft). Techo de 20 ft."
     },
@@ -250,7 +250,7 @@ window.DATA_SECCIONES = {
           exito: "Sus efectos terminan y mueren todas las Plagas aguja y Enredaderas atrapantes de los túneles." }
       ],
       botin: [
-        { nombre: "Dardo +1", detalle: "Con forma de extraño renacuajo (en el ataúd de Gunthar)" },
+        { nombre: "Dardo +1", objetoId: "dardo_mas1", detalle: "Con forma de extraño renacuajo (en el ataúd de Gunthar)" },
         { nombre: "Amuleto con araña de cristal", detalle: "Vale 25 po" },
         { nombre: "Pañuelo de seda azul con bordado dorado", detalle: "Vale 5 po" },
         { nombre: "Monedas de oro", oro: 50, detalle: "En una bolsa" }

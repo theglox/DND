@@ -1022,6 +1022,32 @@ label.btn { display: inline-flex; align-items: center; }
 }
 .aviso.bloqueo .btn { margin-left: auto; }
 
+.enlace-hojas {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: .85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.enlace-hojas:hover { background: var(--surface-2); }
+
+/* Recordatorios de reglas que la app no aplica sola (amarillo) */
+.recordatorio {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid #c9a227;
+  border-left: 4px solid #e8c547;
+  border-radius: 8px;
+  background: rgba(232, 197, 71, .1);
+  font-size: .88rem;
+}
+.recordatorio-titulo { font-weight: 700; color: #f0d36a; }
+.recordatorio-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
 /* Ataque de oportunidad (reacción, azul) */
 .oportunidad {
   margin-bottom: 12px;

@@ -20,11 +20,13 @@ window.Objetos = (function () {
     if (!partida) return;
     if (est.botin && est.botinPartida === partida.id) return;
     est.botinPartida = partida.id;
-    est.botin = (partida.botin || []).map((objetoId, i) => {
-      const o = porId(OBJETOS, objetoId);
+    // Cada entrada: "id" o { id, portador, sintonizado } (objetos que ya llevan de antes)
+    est.botin = (partida.botin || []).map((entrada, i) => {
+      const def = typeof entrada === "string" ? { id: entrada } : entrada;
+      const o = porId(OBJETOS, def.id);
       return {
-        uid: `${objetoId}:${i}`, objetoId, portador: null,
-        sintonizado: false, encendida: false,
+        uid: `${def.id}:${i}`, objetoId: def.id, portador: def.portador || null,
+        sintonizado: Boolean(def.sintonizado), encendida: false,
         cargas: o && o.cargas != null ? o.cargas : null,
         usado: false
       };
@@ -144,6 +146,28 @@ window.Objetos = (function () {
 
   function pocionesDe(pj, est) {
     return delPortador(est, pj.id).filter((it) => (objetoDe(it) || {}).tipo === "pocion");
+  }
+
+  // Objetos maravillosos que lleva (y tiene sintonizados si lo requieren), p. ej. el Periapto de salud
+  function maravillososDe(pj, est) {
+    return delPortador(est, pj.id).filter((it) => {
+      const o = objetoDe(it) || {};
+      return o.tipo === "maravilloso" && (!o.sintonizacion || it.sintonizado);
+    });
+  }
+
+  // Condiciones contra las que sus objetos le dan ventaja en las salvaciones
+  function ventajasSalvacionDe(pj, est) {
+    return maravillososDe(pj, est).flatMap((it) => objetoDe(it).ventajaSalvacionContra || []);
+  }
+
+  // Amanecer (descanso largo): vuelven los usos diarios del botín
+  function amanecer(est) {
+    (est.botin || []).forEach((it) => {
+      it.usadoHoy = false; it.venenoUsado = false; it.envenenado = false;
+      const o = objetoDe(it);
+      if (o && o.recargaTotal && o.cargas != null) it.cargas = o.cargas;   // Gorro: todas las cargas
+    });
   }
 
   // ---------- Inventario de cada PJ ----------
@@ -287,7 +311,14 @@ window.Objetos = (function () {
     if (o.tipo === "pocion") {
       extras.push(item.usado
         ? `<span class="chip chip-usado">Usada</span> <button class="btn btn-sm" data-accion="restaurar" data-uid="${esc(item.uid)}">Deshacer</button>`
-        : `<span class="chip">Disponible</span>`);
+        : `<span class="chip">Disponible</span>${o.aplicaBuff && item.portador ? ` <button class="btn btn-sm" data-accion="beber" data-uid="${esc(item.uid)}" title="Fuera de combate: la bebe quien la lleva (dura 1 hora, hasta el descanso largo)">Beber ahora</button>` : ""}`);
+    }
+    if (o.usoDiario) {
+      extras.push(`<label class="check-inline"><input type="checkbox" data-accion="usado-hoy" data-uid="${esc(item.uid)}" ${item.usadoHoy ? "checked" : ""}> Usado hoy</label>`);
+    }
+    if (o.veneno) {
+      extras.push(`<label class="check-inline"><input type="checkbox" data-accion="veneno-usado" data-uid="${esc(item.uid)}" ${item.venenoUsado ? "checked" : ""}> Veneno usado hoy</label>
+        ${item.envenenado ? `<span class="chip chip-cond">☠ hoja envenenada</span>` : ""}`);
     }
 
     return `
@@ -328,8 +359,12 @@ window.Objetos = (function () {
       } else if (accion === "sintonizar") {
         actualizarItem(uid, (it) => {
           it.sintonizado = e.target.checked;
-          if (!it.sintonizado) it.encendida = false;
+          if (!it.sintonizado) { it.encendida = false; it.envenenado = false; }
         });
+      } else if (accion === "usado-hoy") {
+        actualizarItem(uid, (it) => { it.usadoHoy = e.target.checked; });
+      } else if (accion === "veneno-usado") {
+        actualizarItem(uid, (it) => { it.venenoUsado = e.target.checked; if (!it.venenoUsado) it.envenenado = false; });
       } else if (accion === "oro") {
         Estado.actualizar((est) => {
           est.oro = est.oro || {};
@@ -384,13 +419,19 @@ window.Objetos = (function () {
         });
       } else if (accion === "restaurar") {
         actualizarItem(uid, (it) => { it.usado = false; });
+      } else if (accion === "beber") {
+        actualizarItem(uid, (it) => {
+          const o = objetoDe(it);
+          it.usado = true;
+          Recursos.guardarBuffLargo(Estado.get(), it.portador, { id: o.aplicaBuff, fuenteUid: "pj:" + it.portador });
+        });
       }
     });
     render();
   }
 
   return {
-    init, render, asegurarBotin, armasDe, pocionesDe, objetoDe,
+    init, render, asegurarBotin, armasDe, pocionesDe, maravillososDe, ventajasSalvacionDe, amanecer, objetoDe,
     inventarioDe, cantidadDe, gastarObjeto, municionDe, usablesDe,
     equipoDe, manosArma, manosUsadas, armasEnMano, armasGuardadas, equipar, guardarArma, ponerEscudo
   };

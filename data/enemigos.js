@@ -189,5 +189,221 @@ window.DATA_ENEMIGOS = [
         bonusAtaque: 5, dano: "1d6+3", tipoDano: "cortante" }
     ],
     vd: "2"
+  },
+
+  // ===================== Libro 2 · Grito de la Cosecha (enemigos2.pdf) =====================
+  {
+    id: "ankheg", libro: "libro2",
+    nombre: "Ankheg", en: "Ankheg",
+    tipo: "Monstruosidad grande, sin alineamiento",
+    pgMax: 45, pgFormula: "6d10+12",
+    ca: 14,
+    velocidad: 30, velocidadExtra: "excavar 10 ft",
+    atributos: { FUE: 17, DES: 11, CON: 14, INT: 1, SAB: 13, CAR: 6 },
+    salvaciones: {},
+    bonusIniciativa: 0,
+    sentidos: "Visión en la oscuridad 60 ft · Sentido de la vibración 60 ft",
+    resistencias: [], inmunidades: [], vulnerabilidades: [], inmuneCondiciones: [],
+    rasgos: [
+      { nombre: "Excavador", texto: "Excava roca sólida a la mitad de su velocidad de excavar y deja un túnel de 10 ft de diámetro." }
+    ],
+    recordatorios: [
+      { en: "ataque", titulo: "Mordisco contra su presa",
+        texto: "¿El objetivo está Agarrado por este ankheg? → elige Ventaja en la tirada." }
+    ],
+    acciones: [
+      { nombre: "Mordisco", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 5, dano: "2d6+3", tipoDano: "cortante",
+        danoExtra: [{ dado: "1d6", tipo: "ácido" }],
+        efectoAlGolpear: "Si es Grande o menor: Agarrado (escapar CD 13). Contra un objetivo que tenga agarrado, el Mordisco tiene ventaja.",
+        aplicaCondicionAlGolpear: ["Agarrado"] },
+      { nombre: "Rociada ácida", recarga: "6", alcance: "línea de 30 × 5 ft",
+        cd: 12, salvacion: "DES",
+        dano: "4d6", tipoDano: "ácido", alSalvar: "mitad" }
+    ],
+    vd: "2"
+  },
+  {
+    id: "demoperro", libro: "libro2",
+    nombre: "Demoperro", en: "Demodog",
+    tipo: "Infernal (demonio) pequeño, caótico malvado",
+    pgMax: 27, pgFormula: "6d6+6",
+    ca: 14,
+    velocidad: 50,
+    atributos: { FUE: 16, DES: 15, CON: 12, INT: 6, SAB: 12, CAR: 6 },
+    salvaciones: {},
+    bonusIniciativa: 2,
+    sentidos: "Vista ciega 60 ft · Sigilo +4",
+    resistencias: ["frío", "relámpago"],
+    inmunidades: ["veneno"],
+    vulnerabilidades: [],
+    inmuneCondiciones: ["Envenenado"],
+    rasgos: [
+      { nombre: "Tácticas de manada", texto: "Ventaja en el ataque si un aliado no Incapacitado está a 5 ft del objetivo." }
+    ],
+    recordatorios: [
+      { en: "ataque", titulo: "Tácticas de manada",
+        texto: "¿Hay un aliado del demoperro (no Incapacitado) a 5 ft del objetivo? → elige Ventaja en la tirada." }
+    ],
+    acciones: [
+      { nombre: "Mordisco", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 5, dano: "1d10+3", tipoDano: "perforante",
+        efectoAlGolpear: "Si es Mediano o menor: queda Derribado.",
+        aplicaCondicionAlGolpear: ["Derribado"] }
+    ],
+    vd: "1"
+  },
+  {
+    id: "espantapajaros", libro: "libro2",
+    nombre: "Espantapájaros", en: "Scarecrow",
+    tipo: "Constructo mediano, caótico malvado",
+    pgMax: 27, pgFormula: "6d8",
+    ca: 11,
+    velocidad: 30,
+    atributos: { FUE: 11, DES: 13, CON: 11, INT: 10, SAB: 10, CAR: 13 },
+    salvaciones: {},
+    bonusIniciativa: 3,
+    sentidos: "Visión en la oscuridad 60 ft",
+    resistencias: [],
+    inmunidades: ["veneno"],
+    vulnerabilidades: ["fuego"],
+    inmuneCondiciones: ["Hechizado", "Agotamiento", "Asustado", "Paralizado", "Petrificado", "Envenenado", "Inconsciente"],
+    rasgos: [],
+    recordatorios: [
+      { en: "turno", titulo: "Fin del miedo",
+        texto: "Al TERMINAR este turno, quien quedó Asustado por este espantapájaros en su turno anterior deja de estarlo; si fue por la Mirada, quita también Paralizado.",
+        quitar: ["Asustado", "Paralizado"] }
+    ],
+    acciones: [
+      { nombre: "Garra terrorífica", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 3, dano: "2d4+1", tipoDano: "cortante",
+        efectoAlGolpear: "Queda Asustado hasta el final del siguiente turno del espantapájaros.",
+        aplicaCondicionAlGolpear: ["Asustado"] },
+      { nombre: "Mirada aterradora", alcance: "30 ft, una criatura que vea",
+        cd: 11, salvacion: "SAB",
+        aplicaCondicion: ["Asustado", "Paralizado"],
+        efectoAlFallar: "Asustado hasta el final del siguiente turno del espantapájaros; mientras esté Asustado, también Paralizado (quita ambas a la vez)." }
+    ],
+    vd: "1"
+  },
+  {
+    id: "enredadera_atrapante", libro: "libro2",
+    nombre: "Enredadera atrapante", en: "Vine Blight Tangler",
+    tipo: "Planta mediana, neutral malvada",
+    pgMax: 19, pgFormula: "3d8+6",
+    ca: 12,
+    velocidad: 20,
+    atributos: { FUE: 15, DES: 8, CON: 14, INT: 5, SAB: 10, CAR: 3 },
+    salvaciones: {},
+    bonusIniciativa: -1,
+    sentidos: "Vista ciega 60 ft · Sigilo +1",
+    resistencias: [], inmunidades: [], vulnerabilidades: [],
+    inmuneCondiciones: ["Ensordecido"],
+    rasgos: [],
+    recordatorios: [
+      { en: "turno", titulo: "Fin de las enredaderas",
+        texto: "Al EMPEZAR este turno termina el Apresado de sus Enredaderas atrapantes (el Agarrado de la Enredadera constrictora sigue).",
+        quitar: ["Apresado"] }
+    ],
+    acciones: [
+      { nombre: "Enredadera constrictora", tipo: "cuerpo a cuerpo", alcance: "10 ft",
+        bonusAtaque: 4, dano: "1d10+2", tipoDano: "contundente",
+        efectoAlGolpear: "Si es Grande o menor: Agarrado (escapar CD 12) por una de sus tres enredaderas.",
+        aplicaCondicionAlGolpear: ["Agarrado"] },
+      { nombre: "Enredaderas atrapantes", recarga: "5-6", alcance: "esfera de 10 ft a 60 ft",
+        cd: 12, salvacion: "FUE",
+        aplicaCondicion: "Apresado",
+        efectoAlFallar: "Apresado hasta el inicio del siguiente turno de la enredadera." }
+    ],
+    vd: "1/2"
+  },
+  {
+    id: "hongo_violeta", libro: "libro2",
+    nombre: "Hongo violeta", en: "Violet Fungus",
+    tipo: "Planta mediana, sin alineamiento",
+    pgMax: 18, pgFormula: "4d8",
+    ca: 5,
+    velocidad: 5,
+    atributos: { FUE: 3, DES: 1, CON: 10, INT: 1, SAB: 3, CAR: 1 },
+    salvaciones: {},
+    bonusIniciativa: -5,
+    sentidos: "Vista ciega 30 ft",
+    resistencias: [], inmunidades: [], vulnerabilidades: [],
+    inmuneCondiciones: ["Cegado", "Hechizado", "Ensordecido", "Asustado"],
+    rasgos: [],
+    multiataque: { texto: "Hace dos ataques de Toque putrefacto.", ataques: ["Toque putrefacto", "Toque putrefacto"] },
+    acciones: [
+      { nombre: "Toque putrefacto", tipo: "cuerpo a cuerpo", alcance: "10 ft",
+        bonusAtaque: 2, dano: "1d8", tipoDano: "necrótico" }
+    ],
+    vd: "1/4"
+  },
+  {
+    id: "plaga_aguja", libro: "libro2",
+    nombre: "Plaga aguja", en: "Needle Blight",
+    tipo: "Planta mediana, neutral malvada",
+    pgMax: 16, pgFormula: "3d8+3",
+    ca: 12,
+    velocidad: 30,
+    atributos: { FUE: 12, DES: 12, CON: 13, INT: 4, SAB: 8, CAR: 3 },
+    salvaciones: {},
+    bonusIniciativa: 1,
+    sentidos: "Vista ciega 60 ft",
+    resistencias: [], inmunidades: [], vulnerabilidades: [],
+    inmuneCondiciones: ["Ensordecido"],
+    rasgos: [],
+    acciones: [
+      { nombre: "Garra", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 3, dano: "2d4+1", tipoDano: "cortante" },
+      { nombre: "Agujas", tipo: "distancia", alcance: "30/60 ft",
+        bonusAtaque: 3, dano: "2d4+1", tipoDano: "perforante" }
+    ],
+    vd: "1/4"
+  },
+  {
+    id: "rilly_june", libro: "libro2",
+    nombre: "Rilly June", en: "Rilly June",
+    tipo: "Humanoide (mediano) pequeño, neutral",
+    pgMax: 13, pgFormula: "3d6+3",
+    ca: 12,
+    velocidad: 30,
+    atributos: { FUE: 14, DES: 14, CON: 13, INT: 10, SAB: 13, CAR: 10 },
+    salvaciones: { SAB: 3 },
+    bonusIniciativa: 2,
+    sentidos: "Percepción +3 · Naturaleza +2 · Supervivencia +3",
+    resistencias: [], inmunidades: [], vulnerabilidades: [], inmuneCondiciones: [],
+    rasgos: [],
+    multiataque: { texto: "Hace dos ataques de Horca.", ataques: ["Horca", "Horca"] },
+    acciones: [
+      { nombre: "Horca", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 4, dano: "1d8+2", tipoDano: "perforante" },
+      { nombre: "¡Fuera, largo!", usosPorDia: 1, alcance: "60 ft, una criatura que vea",
+        cd: 11, salvacion: "SAB",
+        dano: "3d6", tipoDano: "psíquico", alSalvar: "mitad",
+        aplicaCondicion: "Asustado",
+        efectoAlFallar: "Asustado hasta el final de su siguiente turno." }
+    ],
+    vd: "1/2"
+  },
+  {
+    id: "plebeyo", libro: "libro2",
+    nombre: "Plebeyo", en: "Commoner",
+    tipo: "Humanoide mediano o pequeño, neutral",
+    pgMax: 4, pgFormula: "1d8",
+    ca: 10,
+    velocidad: 30,
+    atributos: { FUE: 10, DES: 10, CON: 10, INT: 10, SAB: 10, CAR: 10 },
+    salvaciones: {},
+    bonusIniciativa: 0,
+    sentidos: "—",
+    resistencias: [], inmunidades: [], vulnerabilidades: [], inmuneCondiciones: [],
+    rasgos: [
+      { nombre: "Entrenamiento", texto: "Competente en una habilidad a elección del DM, con ventaja en las pruebas de esa habilidad." }
+    ],
+    acciones: [
+      { nombre: "Garrote", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 2, dano: "1d4", tipoDano: "contundente" }
+    ],
+    vd: "0"
   }
 ];

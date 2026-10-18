@@ -16,6 +16,21 @@ window.DATA_BUFFS = [
     efectos: { caBase: 13 }                 // 13 + DES, solo sin armadura
   },
   {
+    id: "escudo", nombre: "Escudo",
+    duracionRondas: 1, concentracion: false,
+    efectos: { ca: 5 }                      // hasta el inicio del siguiente turno del lanzador
+  },
+  {
+    id: "favor_divino", nombre: "Favor divino",
+    duracionRondas: 10, concentracion: false,
+    efectos: { danoArma: { dado: "1d4", tipo: "radiante" } }
+  },
+  {
+    id: "resistencia_acido", nombre: "Resistencia al ácido",
+    duracionRondas: null, concentracion: false,   // 1 hora: dura todo el combate; se pierde con el descanso largo
+    efectos: { resistencias: ["ácido"] }
+  },
+  {
     id: "guia", nombre: "Guía",
     duracionRondas: 10, concentracion: true,
     efectos: { pruebaExtraDado: "1d4" }

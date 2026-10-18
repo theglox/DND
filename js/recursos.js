@@ -56,11 +56,14 @@ window.Recursos = (function () {
   // ---------- Hechizos preparados ----------
   // Los de la sesión (editables en Preparar) o, si ese PJ no tiene copia guardada
   // (p. ej. se eligió la partida antes de añadirlo), los de la partida.
+  // Siempre incluye los "siemprePreparados" del PJ (p. ej. Castigo divino del paladín).
   function preparadosDe(est, pjId) {
     const propios = est.preparados && est.preparados[pjId];
-    if (Array.isArray(propios)) return propios;
     const partida = (window.DATA_PARTIDAS || []).find((p) => p.id === est.partidaId);
-    return (partida && partida.preparados && partida.preparados[pjId]) || [];
+    const lista = Array.isArray(propios) ? propios : (partida && partida.preparados && partida.preparados[pjId]) || [];
+    const pj = PJS.find((p) => p.id === pjId);
+    const siempre = ((pj && pj.siemprePreparados) || []).filter((id) => !lista.includes(id));
+    return siempre.length ? [...siempre, ...lista] : lista;
   }
 
   // ---------- Dados de golpe (tantos como el nivel; se recuperan todos con descanso largo) ----------
@@ -118,12 +121,14 @@ window.Recursos = (function () {
   }
 
   // ---------- Descansos ----------
-  // Corto: recupera 1 uso de los rasgos "1 en corto" (Tomar aliento).
+  // Corto: recupera 1 uso de los rasgos "1 en corto" (Tomar aliento) y todos los de "corto" (Oleada de acción).
   function descansoCorto(est) {
     PJS.forEach((pj) => (pj.recursos || []).forEach((def) => {
+      const r = de(est, pj.id);
       if (String(def.recarga).startsWith("1 en corto")) {
-        const r = de(est, pj.id);
         r.usos[def.id] = Math.max(0, (r.usos[def.id] || 0) - 1);
+      } else if (def.recarga === "corto") {
+        r.usos[def.id] = 0;
       }
     }));
   }
@@ -134,6 +139,7 @@ window.Recursos = (function () {
     est.vida = {};
     est.buffsLargos = {};
     est.inspiracion = {};
+    if (window.Objetos) window.Objetos.amanecer(est);   // Periapto, veneno del Kukri…
   }
 
   return {

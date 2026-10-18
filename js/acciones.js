@@ -60,9 +60,11 @@ window.Acciones = (function () {
     return null;
   }
 
+  // Defensas de la ficha + resistencias de buffs (p. ej. Poción de resistencia)
   function defensasDe(p) {
     const d = datosDe(p);
-    return { resistencias: d.resistencias || [], inmunidades: d.inmunidades || [], vulnerabilidades: d.vulnerabilidades || [] };
+    const deBuffs = (p.buffs || []).flatMap((b) => ((porId(BUFFS, b.id) || {}).efectos || {}).resistencias || []);
+    return { resistencias: [...(d.resistencias || []), ...deBuffs], inmunidades: d.inmunidades || [], vulnerabilidades: d.vulnerabilidades || [] };
   }
 
   function log(c, texto) {
@@ -140,6 +142,27 @@ window.Acciones = (function () {
     return `<div class="panel-condiciones">
       ${conds.map((x) => `<div><b>${esc(x)}</b>${origen(x)}: ${esc(EFECTOS_CONDICION[x])}</div>`).join("")}
     </div>`;
+  }
+
+  // Recuadros que recuerdan reglas que la app no aplica sola (data/enemigos.js → recordatorios).
+  // momento: "turno" (al empezar su turno) o "ataque" (al atacar). r.quitar: condiciones a retirar,
+  // con un botón × por cada criatura que las tenga.
+  function renderRecordatorios(c, p, momento) {
+    const lista = (datosDe(p).recordatorios || []).filter((r) => (r.en || "turno") === momento);
+    if (!lista.length) return "";
+    return lista.map((r) => {
+      const afectados = (r.quitar || []).length
+        ? c.participantes.filter((q) => q.uid !== p.uid && r.quitar.some((x) => tiene(q, x)))
+        : [];
+      const chips = afectados.map((q) => `<div class="recordatorio-fila"><b>${esc(q.nombre)}:</b>
+        ${r.quitar.filter((x) => tiene(q, x)).map((x) => `<span class="chip">${esc(x)}
+          <button class="chip-x" data-accion="ac-quitar-cond" data-uid="${esc(q.uid)}" data-cond="${esc(x)}" aria-label="Quitar ${esc(x)}">×</button></span>`).join("")}</div>`).join("");
+      return `<div class="recordatorio">
+        <div class="recordatorio-titulo">📌 Recuerda · ${esc(r.titulo)}</div>
+        <div>${esc(r.texto)}</div>
+        ${(r.quitar || []).length ? (chips || `<div class="sub">Ahora nadie tiene ${esc(r.quitar.join(" ni "))}.</div>`) : ""}
+      </div>`;
+    }).join("");
   }
 
   // Un agarre (y lo que depende de él, como el Cegado del mordisco del Engendro) termina
@@ -458,20 +481,33 @@ window.Acciones = (function () {
   }
 
   // ---------- Hechizos ----------
+  // Trucos, hechizos preparados y rasgos que se resuelven como un hechizo (Canalizar divinidad)
   function hechizosDe(est, pj) {
-    return [...(pj.trucos || []), ...Recursos.preparadosDe(est, pj.id)].map(hechizo).filter(Boolean);
+    return [...(pj.trucos || []), ...Recursos.preparadosDe(est, pj.id), ...(pj.rasgosConjuro || [])].map(hechizo).filter(Boolean);
   }
 
   // Motivo por el que no se puede lanzar (o null).
   function bloqueoConjuro(est, c, pj, h) {
+    if (h.usaRecurso) return Recursos.restante(est, pj, h.usaRecurso) ? null : `sin usos de ${(Recursos.definicion(pj, h.usaRecurso) || {}).nombre || h.usaRecurso}`;
     if (h.nivel === 0) return null;
     if (Recursos.espaciosLibres(est, pj, h.nivel) === 0) return "sin espacios";
     if (flags(c).espacio) return "ya lanzó un hechizo con espacio este turno";
     return null;
   }
 
+  // Gorro de la Desaparición: la invisibilidad acaba justo después de atacar, dañar o lanzar un conjuro
+  function romperGorro(c, p, motivo) {
+    if (!p || !p.invisibleGorro) return;
+    p.invisibleGorro = false;
+    p.condiciones = (p.condiciones || []).filter((x) => x !== "Invisible");
+    log(c, `↳ ${p.nombre} deja de ser invisible (Gorro de la Desaparición: ${motivo})`);
+  }
+
   function gastarConjuro(est, c, p, h) {
-    if (h.nivel >= 1) {
+    romperGorro(c, p, "lanza un conjuro");
+    if (h.usaRecurso) {
+      Recursos.gastar(est, datosDe(p), h.usaRecurso);
+    } else if (h.nivel >= 1) {
       Recursos.gastarEspacio(est, datosDe(p), h.nivel);
       flags(c).espacio = true;
     }
@@ -576,11 +612,14 @@ window.Acciones = (function () {
       if (h.resolucion === "castigo") lista.push([h.nombre, "Justo después de golpear con un arma cuerpo a cuerpo (gasta 1 espacio)."]);
       else if (tipoTiempo(h.tiempo) === "adicional") lista.push([h.nombre, `${h.nivel ? "Hechizo de nivel 1 (gasta 1 espacio)" : "Truco"}. ${h.texto}`]);
     });
-    (d.recursos || []).forEach((r) => {
+    (d.recursos || []).filter((r) => r.id !== "oleada_accion" && !r.sinBoton).forEach((r) => {
       const def = (d.rasgos || []).find((x) => x.nombre.startsWith(r.nombre));
       lista.push([`${r.nombre} (${Recursos.restante(est, d, r.id)}/${Recursos.total(d, r.id)})`, def ? def.texto : ""]);
     });
-    if (Objetos.pocionesDe(d, est).length) lista.push(["Poción de curación", "Beberla o dársela a una criatura a 5 ft: 2d4 + 2 PG."]);
+    if (d.accionAstuta) Object.values(ASTUTA).forEach((a) => lista.push([`${a.nombre} (Acción astuta)`, a.resumen]));
+    Objetos.pocionesDe(d, est).forEach((it) => { const o = Objetos.objetoDe(it); lista.push([o.nombre, o.texto]); });
+    Objetos.armasDe(d, est).filter(({ item }) => item && item.sintonizado && Objetos.objetoDe(item).veneno && !item.venenoUsado)
+      .forEach(({ item }) => lista.push([`Envenenar ${Objetos.objetoDe(item).nombre}`, "Una vez hasta el amanecer: el próximo golpe obliga a una salvación de CON."]));
     Objetos.armasDe(d, est).forEach(({ item }) => {
       const o = item && Objetos.objetoDe(item);
       if (o && o.activable && item.sintonizado) lista.push([`${o.activable.nombre === "Encendida" ? "Encender/apagar" : "Activar"} ${o.nombre}`, `+${o.activable.danoExtra.dado} de ${o.activable.danoExtra.tipo} al golpear mientras arde.`]);
@@ -616,7 +655,10 @@ window.Acciones = (function () {
     const cd = R.cdConjuro(pj);
     switch (h.resolucion) {
       case "ataque": return `ataque ${R.signo(R.ataqueConjuro(pj))} · ${h.dano} ${h.tipoDano}`;
-      case "salvacion": return `${h.salvacion} CD ${cd}${h.dano ? ` · ${h.dano} ${h.tipoDano}` : h.aplicaCondicion ? ` · ${h.aplicaCondicion}` : ""}`;
+      case "salvacion": {
+        const mod = h.sumaModConjuro ? R.mod(pj.atributos[pj.atributoConjuro]) : 0;
+        return `${h.salvacion} CD ${cd}${h.dano ? ` · ${h.dano}${mod ? " " + R.signo(mod) : ""} ${h.tipoDano}` : h.aplicaCondicion ? ` · ${[].concat(h.aplicaCondicion).join(" y ")}` : ""}`;
+      }
       case "automatico": return `${h.dardos} dardos · ${h.dano} ${h.tipoDano}`;
       case "curacion": return `cura ${h.curacion}${h.sumaModConjuro ? " " + R.signo(R.mod(pj.atributos[pj.atributoConjuro])) : ""}`;
       case "buff": return `${h.tiempo}${h.concentracion ? " · concentración" : ""}`;
@@ -640,11 +682,16 @@ window.Acciones = (function () {
       .filter((a) => a.accion.bonusAtaque != null);
   }
 
-  function puedeCastigar(est, c, p, arma) {
+  function puedeCastigar(est, c, p, arma, id = "castigo_abrasador") {
     if (p.tipo !== "pj" || arma.tipo !== "cuerpo a cuerpo") return false;
-    const h = hechizo("castigo_abrasador");
-    return Recursos.preparadosDe(est, p.refId).includes("castigo_abrasador") && h;
+    const h = hechizo(id);
+    return Recursos.preparadosDe(est, p.refId).includes(id) && h;
   }
+
+  // Castigo divino: 2d8 radiante (+1d8 contra infernales y muertos vivientes).
+  // Castigo del paladín: una vez por descanso largo sin gastar espacio.
+  const castigoGratis = (est, d) => Boolean(Recursos.definicion(d, "castigo_paladin")) && Recursos.restante(est, d, "castigo_paladin") > 0;
+  const contraInfernal = (obj) => /infernal|muerto viviente/i.test(datosDe(obj).tipo || "");
 
   // Bonificador y grupos de dados de daño del ataque en curso.
   function descriptor(est, c, ac) {
@@ -678,6 +725,15 @@ window.Acciones = (function () {
         const h = hechizo("castigo_abrasador");
         grupos.push({ id: "castigo", etiqueta: h.nombre, tipo: h.tipoDano, caras: R.carasDe(h.danoExtra), fijo: 0 });
       }
+      if (ac.opciones.castigoDivino) {
+        const h = hechizo("castigo_divino");
+        const obj = participante(c, ac.objetivoUid);
+        const dado = obj && contraInfernal(obj) ? h.danoExtraInfernal : h.danoExtra;
+        grupos.push({ id: "castigoDivino", etiqueta: h.nombre, tipo: h.tipoDano, caras: R.carasDe(dado), fijo: 0 });
+      }
+      if (tieneBuff(actor, "favor_divino")) {
+        grupos.push({ id: "favor", etiqueta: "Favor divino", tipo: "radiante", caras: [4], fijo: 0 });
+      }
       return { atk, nombre: atk.nombre, bonus: r.bonus, grupos, maestria: atk.maestria, modAtributo: r.modAtributo, competente: r.competente, cuerpo: atk.arma.tipo === "cuerpo a cuerpo" };
     }
 
@@ -691,13 +747,39 @@ window.Acciones = (function () {
     return { atk, nombre: a.nombre, bonus: a.bonusAtaque, grupos, accion: a, competente: true, cuerpo: a.tipo !== "distancia" };
   }
 
+  const tieneBuff = (p, id) => (p.buffs || []).some((b) => b.id === id);
+
+  // Escudo (hechizo de reacción): el objetivo lo puede lanzar cuando le van a golpear.
+  // Motivo por el que no puede (o null).
+  function bloqueoEscudo(est, obj) {
+    if (obj.tipo !== "pj" || obj.pg <= 0) return "no";
+    const d = datosDe(obj);
+    if (!Recursos.preparadosDe(est, d.id).includes("escudo")) return "no";
+    if (tieneBuff(obj, "escudo")) return "ya activo";
+    if (obj.reaccionUsada) return "reacción ya usada";
+    if (INCAPACITANTES.some((x) => tiene(obj, x))) return "incapacitado";
+    if (!Recursos.espaciosLibres(est, d, 1)) return "sin espacios";
+    return null;
+  }
+
+  // Gasta el espacio y la reacción y deja +5 CA hasta el inicio de su siguiente turno
+  function aplicarEscudo(est, c, ac) {
+    const obj = participante(c, ac.objetivoUid);
+    if (!ac.opciones.escudo || !obj || bloqueoEscudo(est, obj)) return;
+    Recursos.gastarEspacio(est, datosDe(obj), 1);
+    obj.reaccionUsada = true;
+    obj.buffs = (obj.buffs || []).filter((b) => b.id !== "escudo");
+    obj.buffs.push({ id: "escudo", fuenteUid: obj.uid });
+    log(c, `${obj.nombre} lanza Escudo (reacción, 1 espacio): +5 CA hasta el inicio de su turno → CA ${caDe(obj)}`);
+  }
+
   function resultadoAtaque(c, ac, desc) {
     const actor = participante(c, ac.actorUid);
     const obj = participante(c, ac.objetivoUid);
     if (!obj) return null;
     const { res, total } = tiradaD20("a", ac, "atk", actor, desc.bonus, "ataqueExtraDado");
     if (total == null) return null;
-    const ca = caDe(obj) + ((COBERTURAS[ac.cobertura] || {}).ca || 0);
+    const ca = caDe(obj) + ((COBERTURAS[ac.cobertura] || {}).ca || 0) + (ac.opciones.escudo && !tieneBuff(obj, "escudo") ? 5 : 0);
     const pifia = res.natural === 1;
     const golpe = res.natural === 20 || (!pifia && total >= ca);
     // Golpe a 5 ft contra Paralizado o Inconsciente: crítico automático
@@ -795,16 +877,19 @@ window.Acciones = (function () {
     }
     if (ac.conjuro) {
       const h = hechizo(ac.conjuro);
+      const lanzador = datosDe(actor);
+      const modConjuro = R.mod(lanzador.atributos[lanzador.atributoConjuro]);
       return {
-        nombre: h.nombre, cd: R.cdConjuro(datosDe(actor)), salvacion: h.salvacion, condicion: h.aplicaCondicion,
-        efectoAlFallar: h.efectoAlFallar, dano: h.dano, tipoDano: h.tipoDano, alSalvar: h.alSalvar,
-        exitoAutomatico: h.exitoAutomatico, hechizo: h, area: h.area
+        nombre: h.nombre, cd: R.cdConjuro(lanzador), salvacion: h.salvacion, condicion: h.aplicaCondicion,
+        efectoAlFallar: h.efectoAlFallar, tipoDano: h.tipoDano, alSalvar: h.alSalvar,
+        dano: h.dano && h.sumaModConjuro && modConjuro ? `${h.dano}${R.signo(modConjuro)}` : h.dano,
+        exitoAutomatico: h.exitoAutomatico, hechizo: h, area: h.area, soloTipos: h.soloTipos
       };
     }
     const a = datosDe(actor).acciones[ac.idx];
     return {
       nombre: a.nombre, cd: a.cd, salvacion: a.salvacion, condicion: a.aplicaCondicion,
-      efectoAlFallar: a.efectoAlFallar, dano: a.dano, tipoDano: a.tipoDano, alSalvar: a.alSalvar
+      efectoAlFallar: a.efectoAlFallar, dano: a.dano, tipoDano: a.tipoDano, alSalvar: a.alSalvar, area: a.alcance
     };
   }
 
@@ -821,9 +906,13 @@ window.Acciones = (function () {
     return (d.inmuneCondiciones || []).includes("Agotamiento") || (d.inmuneA || []).includes("Dormir mágico");
   }
 
+  // Una salvación puede imponer una o varias condiciones (p. ej. Asustado y Paralizado)
+  const condicionesDe = (fuente) => [].concat(fuente.condicion || []);
+
   function modoSalvacionSugerido(p, fuente) {
     const d = datosDe(p);
-    const ventaja = fuente.condicion && (d.ventajaSalvacionContra || []).includes(fuente.condicion);
+    const contra = [...(d.ventajaSalvacionContra || []), ...(p.tipo === "pj" ? Objetos.ventajasSalvacionDe(d, Estado.get()) : [])];
+    const ventaja = condicionesDe(fuente).some((cond) => contra.includes(cond));
     const desventaja = fuente.salvacion === "DES" && tiene(p, "Apresado");
     return ventaja && !desventaja ? "ventaja" : desventaja && !ventaja ? "desventaja" : "normal";
   }
@@ -840,6 +929,10 @@ window.Acciones = (function () {
     const p = participante(c, c.turnoUid);
     if (!p) return;
     p.reaccionUsada = false;
+    if (tieneBuff(p, "escudo")) {
+      p.buffs = p.buffs.filter((b) => b.id !== "escudo");
+      log(c, `Termina Escudo de ${p.nombre} → CA ${caDe(p)}`);
+    }
     const d = datosDe(p);
     // Caducan las marcas "hasta el inicio de tu próximo turno" y las de criaturas caídas
     c.marcas = (c.marcas || []).filter((m) => {
@@ -881,7 +974,7 @@ window.Acciones = (function () {
     partes.push(renderEntorno(c));
     const caido = p.tipo === "pj" && p.pg === 0;
     if (p.tipo === "pj" && !caido) partes.push(renderRecursos(est, p));
-    if (p.tipo === "enemigo") partes.push(renderRecargas(c, p));
+    if (p.tipo === "enemigo") partes.push(renderRecargas(c, p), renderRecordatorios(c, p, "turno"));
 
     if (caido) {
       partes.push(renderSalvMuerte(c, p));
@@ -931,6 +1024,13 @@ window.Acciones = (function () {
       <span class="accion-nombre">${icono} ${esc(nombre)}${etiqueta}</span><span class="sub">${esc(detalle)}</span></button>`;
   }
 
+  // Acción astuta (pícaro nv 2): Correr, Destrabarse o Esconderse como acción adicional
+  const ASTUTA = {
+    correr: { icono: "🏃", nombre: "Correr", resumen: "movimiento extra igual a su velocidad" },
+    destrabarse: { icono: "↩", nombre: "Destrabarse", resumen: "su movimiento no provoca ataques de oportunidad este turno" },
+    esconderse: { icono: "🫥", nombre: "Esconderse", resumen: "DES (Sigilo) CD 15 sin que la vean; si supera, Invisible" }
+  };
+
   function renderMenu(est, c, p) {
     const d = datosDe(p);
     // Dos apartados según lo que cuesta cada cosa ahora mismo
@@ -946,7 +1046,7 @@ window.Acciones = (function () {
         const r = R.ataqueArma(d, a.arma);
         const mun = Objetos.municionDe(est, d, a.arma);
         sinMunicion = Boolean(mun) && mun.cantidad === 0;
-        detalle = `${R.signo(r.bonus)} · ${r.textoDano}${a.item && a.item.encendida ? " +2d6 fuego" : ""}${mun ? ` · ${mun.cantidad} ${mun.nombre.toLowerCase()}` : ""}`;
+        detalle = `${R.signo(r.bonus)} · ${r.textoDano}${a.item && a.item.encendida ? " +2d6 fuego" : ""}${a.item && a.item.envenenado ? " · ☠ hoja envenenada" : ""}${mun ? ` · ${mun.cantidad} ${mun.nombre.toLowerCase()}` : ""}`;
       } else {
         const extra = (a.accion.danoExtra || []).map((x) => ` + ${x.dado}`).join("");
         detalle = `${R.signo(a.accion.bonusAtaque)} · ${a.accion.dano}${extra}`;
@@ -972,20 +1072,33 @@ window.Acciones = (function () {
       });
     } else {
       hechizosDe(est, d).forEach((h) => {
-        if (h.resolucion === "castigo") return;   // se usa desde el ataque con arma
+        if (h.resolucion === "castigo" || h.resolucion === "reaccion") return;   // se usan desde un ataque (propio o enemigo)
         const costo = costoSimple(c, tipoTiempo(h.tiempo));
         const bloqueo = bloqueoConjuro(est, c, d, h) || (!costo && (tipoTiempo(h.tiempo) === "adicional" ? "acción adicional ya usada" : "acción ya usada"));
-        (tipoTiempo(h.tiempo) === "adicional" ? adicionales : conjuros).push(boton("ac-conjuro", `data-id="${esc(h.id)}"`, h.nivel ? "✨" : "✧",
-          h.nombre, `${h.nivel ? "nv1 · gasta 1 espacio" : "truco"} · ${resumenConjuro(d, h)}${bloqueo ? " · " + bloqueo : ""}`,
-          Boolean(bloqueo), costo, h.nivel ? "btn-conjuro-nivel" : "btn-truco"));
+        (tipoTiempo(h.tiempo) === "adicional" ? adicionales : conjuros).push(boton("ac-conjuro", `data-id="${esc(h.id)}"`, h.usaRecurso ? "☀" : h.nivel ? "✨" : "✧",
+          h.nombre, `${h.usaRecurso ? `${Recursos.definicion(d, h.usaRecurso).nombre} ${Recursos.restante(est, d, h.usaRecurso)}/${Recursos.total(d, h.usaRecurso)}` : h.nivel ? "nv1 · gasta 1 espacio" : "truco"} · ${resumenConjuro(d, h)}${bloqueo ? " · " + bloqueo : ""}`,
+          Boolean(bloqueo), costo, h.usaRecurso ? "btn-canalizar" : h.nivel ? "btn-conjuro-nivel" : "btn-truco"));
       });
       (d.recursos || []).forEach((r) => {
         const quedan = Recursos.restante(est, d, r.id);
+        if (r.id === "oleada_accion") {
+          // Oleada de acción: sin coste; tras gastar la acción, da otra (no la acción Magia)
+          const f = flags(c);
+          const motivo = f.oleada ? "ya usada este turno" : !f.accion ? "primero usa tu acción" : quedan === 0 ? "sin usos (descanso corto o largo)" : "";
+          otras.push(boton("ac-oleada", "", "⚡", r.nombre, `sin coste · una acción más este turno (no Magia) · ${quedan}/${Recursos.total(d, r.id)}${motivo ? " · " + motivo : ""}`, Boolean(motivo), null, "btn-oleada"));
+          return;
+        }
+        if (r.sinBoton) return;   // se usa desde otro sitio (p. ej. Canalizar divinidad, en Conjuros)
         const info = r.id === "tomar_aliento" ? `acción adicional · 1d10 + ${d.nivel}` :
           r.id === "imposicion_manos" ? "acción adicional · reserva de PG" : "acción adicional";
         const costo = costoSimple(c, "adicional");
         adicionales.push(boton("ac-recurso", `data-id="${esc(r.id)}"`, "✚", r.nombre, `${info} · ${quedan}/${Recursos.total(d, r.id)}${costo ? "" : " · acción adicional ya usada"}`, quedan === 0 || !costo, costo));
       });
+      if (d.accionAstuta) {
+        const costo = costoSimple(c, "adicional");
+        Object.entries(ASTUTA).forEach(([tipo, a]) => adicionales.push(boton("ac-astuta", `data-tipo="${tipo}"`, a.icono, a.nombre,
+          `Acción astuta · ${a.resumen}${costo ? "" : " · acción adicional ya usada"}`, !costo, costo)));
+      }
       Objetos.usablesDe(est, d).forEach(({ entrada, def }) => {
         const cd = def.cd === "lanzador" ? cdLanzador(d) : def.cd;
         const info = def.uso === "salvacion" ? `${def.salvacion} CD ${cd}` : "estabiliza a 0 PG";
@@ -995,7 +1108,30 @@ window.Acciones = (function () {
       Objetos.pocionesDe(d, est).forEach((it) => {
         const o = Objetos.objetoDe(it);
         const costo = costoSimple(c, "adicional");
-        adicionales.push(boton("ac-pocion", `data-uid="${esc(it.uid)}"`, "🧪", o.nombre, `acción adicional · ${o.curacion}${costo ? "" : " · acción adicional ya usada"}`, !costo, costo));
+        const info = o.aplicaBuff ? `${(porId(BUFFS, o.aplicaBuff) || {}).nombre} 1 hora` : o.curacion;
+        adicionales.push(boton(o.aplicaBuff ? "ac-pocion-buff" : "ac-pocion", `data-uid="${esc(it.uid)}"`, "🧪", o.nombre, `acción adicional · ${info} · a sí o a alguien a 5 ft${costo ? "" : " · acción adicional ya usada"}`, !costo, costo));
+      });
+      // Periapto de salud: acción Magia, una vez hasta el amanecer
+      Objetos.maravillososDe(d, est).filter((it) => Objetos.objetoDe(it).curacion).forEach((it) => {
+        const o = Objetos.objetoDe(it);
+        const costo = costoSimple(c, "accion");
+        otras.push(boton("ac-maravilloso", `data-uid="${esc(it.uid)}"`, "📿", o.nombre, `acción Magia · cura ${o.curacion}${it.usadoHoy ? " · ya usado hoy" : ""}${costo ? "" : " · acción ya usada"}`, it.usadoHoy || !costo, costo));
+      });
+      // Gorro de la Desaparición: acción Magia y 1 carga → Invisible
+      Objetos.maravillososDe(d, est).filter((it) => Objetos.objetoDe(it).invisibilidad).forEach((it) => {
+        const o = Objetos.objetoDe(it);
+        const costo = costoSimple(c, "accion");
+        const motivo = !it.cargas ? "sin cargas (vuelven al amanecer)" : p.invisibleGorro ? "ya está invisible" : !costo ? "acción ya usada" : "";
+        otras.push(boton("ac-gorro", `data-uid="${esc(it.uid)}"`, "🎩", o.nombre,
+          `acción Magia · Invisible 10 min · ${it.cargas}/${o.cargas} cargas · termina al atacar, dañar o lanzar un conjuro${motivo ? " · " + motivo : ""}`, Boolean(motivo), costo));
+      });
+      // Kukri empapado en veneno: acción adicional para envenenar la hoja (1 vez hasta el amanecer)
+      Objetos.armasDe(d, est).filter(({ item }) => item && item.sintonizado && Objetos.objetoDe(item).veneno).forEach(({ item }) => {
+        const o = Objetos.objetoDe(item);
+        const costo = costoSimple(c, "adicional");
+        const motivo = item.envenenado ? "la hoja ya está envenenada" : item.venenoUsado ? "ya usado hoy" : !costo ? "acción adicional ya usada" : "";
+        adicionales.push(boton("ac-envenenar", `data-uid="${esc(item.uid)}"`, "☠", `Envenenar ${o.nombre}`,
+          `1 min o hasta golpear · CON CD ${o.veneno.cd} o ${o.veneno.dano} ${o.veneno.tipoDano} y ${o.veneno.condicion}${motivo ? " · " + motivo : ""}`, Boolean(motivo), costo));
       });
     }
 
@@ -1005,8 +1141,9 @@ window.Acciones = (function () {
     if (p.tipo === "enemigo") {
       d.acciones.filter((a) => a.bonusAtaque == null && a.cd == null).forEach((a) => notasAccion.push(`<b>${esc(a.nombre)}:</b> ${esc(a.texto)}`));
       (d.accionesAdicionales || []).forEach((a) => notasAdicional.push(`<b>${esc(a.nombre)}:</b> ${esc(a.texto)}`));
-    } else if (Recursos.preparadosDe(est, d.id).includes("castigo_abrasador")) {
-      notasAdicional.push(`<b>Castigo abrasador:</b> justo después de golpear con un arma cuerpo a cuerpo (casilla dentro del ataque).`);
+    } else {
+      ["castigo_abrasador", "castigo_divino"].filter((id) => Recursos.preparadosDe(est, d.id).includes(id)).forEach((id) =>
+        notasAdicional.push(`<b>${esc(hechizo(id).nombre)}:</b> justo después de golpear con un arma cuerpo a cuerpo (casilla dentro del ataque).`));
     }
 
     const f = flags(c);
@@ -1193,6 +1330,13 @@ window.Acciones = (function () {
     let listo = total != null;
     if (pe.tipo === "concentracion") {
       titulo = `<b>${esc(p.nombre)}</b> recibió daño: salvación de <b>CON CD <span class="objetivo-num">${pe.cd}</span></b> para mantener <b>${esc(pe.nombre)}</b>`;
+    } else if (pe.tipo === "veneno") {
+      titulo = `<b>${esc(pe.nombre)}</b> sobre ${esc(p.nombre)}: salvación de <b>CON CD <span class="objetivo-num">${pe.cd}</span></b>; si falla, ${esc(pe.dano)} de ${esc(pe.tipoDano)} y ${esc(pe.condicion)} 1 min`;
+      if (total != null && !supera) {
+        const caras = R.carasDe(pe.dano);
+        dados = `<div class="grupo-dados"><span class="grupo-etiqueta">Veneno</span><div class="dados">${D.renderGrupo(caras, pe.valores.veneno || [], `ac|v|${pe.id}|veneno`)}</div></div>`;
+        listo = D.sumaGrupo(caras, pe.valores.veneno || []) != null;
+      }
     } else {
       titulo = `<b>${esc(pe.nombre)}</b> sobre ${esc(p.nombre)}: 1d6 de fuego y salvación de <b>CON CD <span class="objetivo-num">${pe.cd}</span></b> (si la supera, se apaga)`;
       dados = `<div class="grupo-dados"><span class="grupo-etiqueta">Fuego</span><div class="dados">${D.renderGrupo([6], pe.valores.fuego || [], `ac|v|${pe.id}|fuego`)}</div></div>`;
@@ -1214,8 +1358,46 @@ window.Acciones = (function () {
       </div>`;
   }
 
+  // Poción que da un buff (Poción de resistencia): a sí o a una criatura a 5 ft
+  function renderPocionBuff(est, c, ac) {
+    const actor = participante(c, ac.actorUid);
+    const item = (est.botin || []).find((it) => it.uid === ac.itemUid);
+    const o = item && Objetos.objetoDe(item);
+    if (!o) return "";
+    return `
+      <div class="accion-en-curso">
+        <div class="fila">
+          <span class="paso-etiqueta">${esc(actor.nombre)} usa <b>${esc(o.nombre)}</b> (acción adicional) en</span>
+          <select data-accion="ac-objetivo">
+            ${aliados(c, actor).map((q) => `<option value="${esc(q.uid)}" ${q.uid === ac.objetivoUid ? "selected" : ""}>${esc(q.nombre)}${q.uid === actor.uid ? " (sí mismo)" : ""}</option>`).join("")}
+          </select>
+        </div>
+        <p class="sub">${esc(o.texto)}</p>
+        <div class="barra-acciones">
+          <button class="btn" data-accion="ac-cancelar">Cancelar</button>
+          <button class="btn btn-primary" data-accion="ac-aplicar">Aplicar</button>
+        </div>
+      </div>`;
+  }
+
+  function aplicarPocionBuff(est, c, ac) {
+    const actor = participante(c, ac.actorUid);
+    const obj = participante(c, ac.objetivoUid);
+    const item = (est.botin || []).find((it) => it.uid === ac.itemUid);
+    if (!item || !obj) return;
+    const o = Objetos.objetoDe(item);
+    gastarCosto(c, ac);
+    item.usado = true;
+    anadirBuff(c, obj, o.aplicaBuff, actor, {});
+    const txt = `${actor.nombre} usa ${o.nombre} en ${obj.nombre}: ${(porId(BUFFS, o.aplicaBuff) || {}).nombre} durante 1 hora`;
+    log(c, txt);
+    c.ultimo = { clase: "cura", html: `🧪 ${esc(txt)}` };
+    c.accion = null;
+  }
+
   function renderAccion(est, c, ac) {
     switch (ac.tipo) {
+      case "pocionBuff": return renderPocionBuff(est, c, ac);
       case "ataque": return renderAtaque(est, c, ac);
       case "salvacion": return renderSalvacion(c, ac);
       case "dardos": return renderDardos(c, ac);
@@ -1266,8 +1448,15 @@ window.Acciones = (function () {
         op.push(check("salvaje", ac.opciones.salvaje, `Atacante salvaje: tira el daño del arma dos veces y usa el mayor${usado ? " · ya usado este turno" : ""}`, usado));
       }
       if (!ac.oportunidad && puedeCastigar(est, c, actor, arma)) {
-        const bloqueo = !ac.opciones.castigo && (bloqueoConjuro(est, c, d, hechizo("castigo_abrasador")) || (f.adicional && "acción adicional ya usada"));
+        const bloqueo = !ac.opciones.castigo && ((ac.opciones.castigoDivino && "ya usas Castigo divino") || bloqueoConjuro(est, c, d, hechizo("castigo_abrasador")) || (f.adicional && "acción adicional ya usada"));
         op.push(check("castigo", ac.opciones.castigo, `Castigo abrasador al golpear (+1d6 fuego y arde; gasta 1 espacio, acción adicional)${bloqueo ? " · " + bloqueo : ""}`, Boolean(bloqueo)));
+      }
+      if (!ac.oportunidad && puedeCastigar(est, c, actor, arma, "castigo_divino")) {
+        const gratis = castigoGratis(est, d);
+        const bloqueo = !ac.opciones.castigoDivino && ((ac.opciones.castigo && "ya usas Castigo abrasador") || (f.adicional && "acción adicional ya usada") ||
+          (!gratis && bloqueoConjuro(est, c, d, hechizo("castigo_divino"))));
+        op.push(check("castigoDivino", ac.opciones.castigoDivino,
+          `Castigo divino al golpear (+2d8 radiante, +1d8 contra infernal o muerto viviente; acción adicional · ${gratis ? "gratis: Castigo del paladín, 1/descanso largo" : "gasta 1 espacio"})${bloqueo ? " · " + bloqueo : ""}`, Boolean(bloqueo)));
       }
       if (!desc.competente) op.push(`<span class="sub aviso-texto">Sin competencia con esta arma: no suma el bonificador de competencia.</span>`);
     }
@@ -1275,6 +1464,11 @@ window.Acciones = (function () {
     if (tiene(actor, "Hechizado") && hechizador === obj.uid) op.push(`<span class="sub aviso-texto">Hechizado: no puede atacar a quien le hechizó.</span>`);
     const indefenso = desc.cuerpo && ["Paralizado", "Inconsciente"].find((x) => tiene(obj, x));
     if (indefenso) op.push(check("a5ft", ac.opciones.a5ft !== false, `A 5 ft de un objetivo ${indefenso}: si impacta, es crítico automático`));
+    const bEscudo = bloqueoEscudo(est, obj);
+    if (bEscudo !== "no" && bEscudo !== "ya activo") {
+      op.push(check("escudo", ac.opciones.escudo && !bEscudo,
+        `🛡 ${obj.nombre} lanza Escudo (reacción): +5 CA contra este ataque y hasta el inicio de su turno · gasta 1 espacio${bEscudo ? " · " + bEscudo : ""}`, Boolean(bEscudo)));
+    }
     const sug = ac.sugerencia;
     const razones = sug && (sug.ventajas.length || sug.desventajas.length)
       ? `<div class="razones">${sug.ventajas.length ? `<span class="ok">Ventaja: ${esc(sug.ventajas.join(", "))}</span>` : ""}
@@ -1321,6 +1515,7 @@ window.Acciones = (function () {
           </div>
           ${op.length ? `<div class="opciones">${op.join("")}</div>` : ""}
         </div>
+        ${actor.tipo === "enemigo" ? renderRecordatorios(c, actor, "ataque") : ""}
         <div class="paso">
           <div class="fila cobertura">
             <span class="sub">Cobertura del objetivo</span>
@@ -1384,7 +1579,7 @@ window.Acciones = (function () {
       const sugerido = modoSalvacionSugerido(p, fuente) === "ventaja";
       return `<div class="fila-tirada ${p.tipo}">
         <div class="fila-tirada-nombre"><span class="nombre">${esc(p.nombre)}</span>
-          <span class="sub">1d20 ${R.signo(bonus)} (${fuente.salvacion})${sugerido ? " · ventaja contra " + esc(fuente.condicion) : ""}</span></div>
+          <span class="sub">1d20 ${R.signo(bonus)} (${fuente.salvacion})${sugerido ? " · ventaja contra " + esc(condicionesDe(fuente).join(" y ")) : ""}</span></div>
         ${selectModo("a", uid, ac.tiradas[uid].modo)}
         <div class="dados">${html}</div>
         <div class="total ${total == null ? "" : supera ? "nat20" : "nat1"}">${total == null ? "—" : total}<span class="sub">${total == null ? "" : (supera ? " supera" : " falla") + previa(p, supera)}</span></div>
@@ -1407,7 +1602,7 @@ window.Acciones = (function () {
       <div class="accion-en-curso">
         <div class="paso">
           <div class="paso-titulo">${esc(actor.nombre)} ${ac.conjuro ? "lanza" : "usa"} <b>${esc(fuente.nombre)}</b>: salvación de <b>${fuente.salvacion} CD <span class="objetivo-num">${fuente.cd}</span></b>${fuente.area ? ` <span class="sub">(${esc(fuente.area)})</span>` : ""}</div>
-          ${fuente.condicion ? `<p class="sub">Si falla: queda ${esc(fuente.condicion)}. ${esc(fuente.efectoAlFallar || "")}</p>` : fuente.efectoAlFallar ? `<p class="sub">Si falla: ${esc(fuente.efectoAlFallar)}</p>` : ""}
+          ${fuente.condicion ? `<p class="sub">Si falla: queda ${esc(condicionesDe(fuente).join(" y "))}. ${esc(fuente.efectoAlFallar || "")}</p>` : fuente.efectoAlFallar ? `<p class="sub">Si falla: ${esc(fuente.efectoAlFallar)}</p>` : ""}
           <div class="chips objetivos-check">
             ${lista.map((q) => `<label class="check-inline"><input type="checkbox" data-accion="ac-objetivos" data-uid="${esc(q.uid)}" ${ac.objetivos.includes(q.uid) ? "checked" : ""}> ${esc(q.nombre)}</label>`).join("")}
           </div>
@@ -1450,7 +1645,7 @@ window.Acciones = (function () {
       const item = (est.botin || []).find((it) => it.uid === ac.fuente.uid);
       const o = item && Objetos.objetoDe(item);
       if (!o) return null;
-      return { nombre: o.nombre, tiempo: o.tiempo, caras: R.carasDe(o.curacion), fijo: R.parseDados(o.curacion).fijo, item };
+      return { nombre: o.nombre, tiempo: o.tiempo, caras: R.carasDe(o.curacion), fijo: R.parseDados(o.curacion).fijo, item, soloPropio: Boolean(o.soloPropio), usoDiario: Boolean(o.usoDiario) };
     }
     if (ac.fuente.tipo === "conjuro") {
       const h = hechizo(ac.fuente.id);
@@ -1493,7 +1688,7 @@ window.Acciones = (function () {
     const actor = participante(c, ac.actorUid);
     const h = hechizo(ac.conjuro);
     const max = h.objetivos || 1;
-    const lista = aliados(c, actor);
+    const lista = /^personal/.test(h.alcance || "") ? [actor] : aliados(c, actor);
     return `
       <div class="accion-en-curso">
         <div class="paso-titulo">${esc(actor.nombre)} lanza <b>${esc(h.nombre)}</b> (${esc(h.tiempo)}${h.concentracion ? ", concentración" : ""})</div>
@@ -1840,6 +2035,70 @@ window.Acciones = (function () {
         c.accion = nuevaAccion("curacion", actor, { fuente: { tipo: "item", uid: ds.uid }, objetivoUid: actor.uid, costo: "adicional" });
         c.ultimo = null;
         break;
+      case "ac-pocion-buff":
+        c.accion = nuevaAccion("pocionBuff", actor, { itemUid: ds.uid, objetivoUid: actor.uid, costo: "adicional" });
+        c.ultimo = null;
+        break;
+      case "ac-maravilloso":
+        c.accion = nuevaAccion("curacion", actor, { fuente: { tipo: "item", uid: ds.uid }, objetivoUid: actor.uid, costo: "accion" });
+        c.ultimo = null;
+        break;
+      case "ac-gorro": {
+        const item = (est.botin || []).find((it) => it.uid === ds.uid);
+        if (!item || !item.cargas || actor.invisibleGorro || !costoSimple(c, "accion")) break;
+        item.cargas -= 1;
+        const f = flags(c);
+        f.accion = true;
+        f.accionTipo = "otra";
+        actor.invisibleGorro = true;
+        const txt = `${actor.nombre} usa ${Objetos.objetoDe(item).nombre} (acción Magia, quedan ${item.cargas} cargas): ${anadirCondicion(actor, "Invisible")}`;
+        log(c, txt);
+        c.ultimo = { clase: "", html: `🎩 ${esc(txt)}. <span class="sub">Termina justo después de atacar, causar daño o lanzar un conjuro.</span>` };
+        break;
+      }
+      case "ac-envenenar": {
+        const item = (est.botin || []).find((it) => it.uid === ds.uid);
+        if (!item || item.envenenado || item.venenoUsado || !costoSimple(c, "adicional")) break;
+        item.envenenado = true;
+        item.venenoUsado = true;
+        flags(c).adicional = true;
+        const o = Objetos.objetoDe(item);
+        const txt = `${actor.nombre} envenena ${o.nombre} (acción adicional): el próximo golpe obliga a una salvación de CON CD ${o.veneno.cd}`;
+        log(c, txt);
+        c.ultimo = { clase: "", html: `☠ ${esc(txt)}` };
+        break;
+      }
+      case "ac-astuta": {
+        const a = ASTUTA[ds.tipo];
+        if (!a || !costoSimple(c, "adicional")) break;
+        flags(c).adicional = true;
+        const d = datosDe(actor);
+        log(c, `${actor.nombre} usa Acción astuta: ${a.nombre}`);
+        c.ultimo = ds.tipo === "esconderse"
+          ? { clase: "", html: `${a.icono} <b>${esc(actor.nombre)}</b> intenta esconderse: tira 1d20 ${R.signo((d.habilidades || {}).Sigilo ?? R.mod(d.atributos.DES))} (Sigilo) contra CD 15.
+              <div class="fila" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-accion="ac-escondida">Supera → queda Invisible</button>
+              <span class="sub">Si falla, no pasa nada. Deja de estar Invisible al hacer ruido, atacar o lanzar un conjuro con componente verbal, o si la encuentran.</span></div>` }
+          : { clase: "", html: `${a.icono} <b>${esc(actor.nombre)}</b> usa ${esc(a.nombre)} (acción adicional): ${esc(a.resumen)}.` };
+        break;
+      }
+      case "ac-escondida":
+        log(c, `↳ ${anadirCondicion(actor, "Invisible")} (escondida)`);
+        c.ultimo = { clase: "", html: `🫥 <b>${esc(actor.nombre)}</b> queda Invisible: sus ataques tienen ventaja y los ataques contra ella, desventaja. Quítala cuando la descubran o ataque.` };
+        break;
+      case "ac-oleada": {
+        const d = datosDe(actor);
+        const f = flags(c);
+        if (!f.accion || f.oleada || !Recursos.restante(est, d, "oleada_accion")) break;
+        Recursos.gastar(est, d, "oleada_accion");
+        f.oleada = true;
+        f.accion = false;
+        f.accionTipo = null;
+        f.ataques = 0;
+        const txt = `${actor.nombre} usa Oleada de acción: tiene otra acción este turno (no Magia)`;
+        log(c, txt);
+        c.ultimo = { clase: "", html: `⚡ ${esc(txt)}` };
+        break;
+      }
       case "ac-recurso":
         c.ultimo = null;
         if (ds.id === "tomar_aliento") {
@@ -1938,6 +2197,7 @@ window.Acciones = (function () {
         const p = participante(c, ds.uid);
         p.condiciones = (p.condiciones || []).filter((x) => x !== ds.cond);
         if (p.origenes) delete p.origenes[ds.cond];
+        if (ds.cond === "Invisible") p.invisibleGorro = false;
         log(c, `${p.nombre} ya no está ${ds.cond}`);
         break;
       }
@@ -1961,6 +2221,7 @@ window.Acciones = (function () {
     else if (ac.tipo === "utilidad") aplicarUtilidad(est, c, ac);
     else if (ac.tipo === "imposicion") aplicarImposicion(est, c, ac);
     else if (ac.tipo === "estabilizar") aplicarEstabilizar(est, c, ac);
+    else if (ac.tipo === "pocionBuff") aplicarPocionBuff(est, c, ac);
   }
 
   function aplicarAtaque(est, c, ac) {
@@ -1970,6 +2231,8 @@ window.Acciones = (function () {
     const r = resultadoAtaque(c, ac, desc);
     const res = calcularDano(desc.grupos, ac.valores, r.critico, defensasDe(obj), ac.opciones.salvaje);
     if (!res) return;
+    aplicarEscudo(est, c, ac);
+    romperGorro(c, actor, "ataca");
     if (desc.hechizo) gastarConjuro(est, c, actor, desc.hechizo);
     gastarCosto(c, ac, { ataque: !desc.hechizo, ligera: desc.atk && desc.atk.pj && esLigera(desc.atk.arma), armaId: desc.atk && desc.atk.arma && desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
@@ -1990,6 +2253,27 @@ window.Acciones = (function () {
         obj.efectos = (obj.efectos || []).filter((e) => e.tipo !== "ardiendo");
         obj.efectos.push({ tipo: "ardiendo", nombre: h.nombre, cd: R.cdConjuro(datosDe(actor)), fuenteUid: actor.uid });
         extras.push(`${obj.nombre} arde: al inicio de sus turnos 1d6 de fuego y salvación de CON CD ${R.cdConjuro(datosDe(actor))}.`);
+      }
+    }
+    // Kukri envenenado: el golpe gasta el veneno y el objetivo hace la salvación (pendiente)
+    const itemArma = desc.atk && desc.atk.item;
+    if (itemArma && itemArma.envenenado && (Objetos.objetoDe(itemArma) || {}).veneno) {
+      const v = Objetos.objetoDe(itemArma).veneno;
+      itemArma.envenenado = false;
+      if (obj.pg > 0) {
+        nuevaPendiente(c, { tipo: "veneno", uid: obj.uid, cd: v.cd, nombre: Objetos.objetoDe(itemArma).nombre, dano: v.dano, tipoDano: v.tipoDano, condicion: v.condicion });
+        extras.push(`Veneno: ${obj.nombre} hace salvación de CON CD ${v.cd} (arriba, en pendientes).`);
+      }
+    }
+    if (ac.opciones.castigoDivino) {
+      flags(c).adicional = true;
+      const d = datosDe(actor);
+      if (castigoGratis(est, d)) {
+        Recursos.gastar(est, d, "castigo_paladin");
+        extras.push("Castigo divino con Castigo del paladín (sin gastar espacio; vuelve tras un descanso largo).");
+      } else {
+        gastarConjuro(est, c, actor, hechizo("castigo_divino"));
+        extras.push("Castigo divino: gasta 1 espacio de nivel 1.");
       }
     }
     if (obj.pg > 0) {
@@ -2036,6 +2320,8 @@ window.Acciones = (function () {
     const obj = participante(c, ac.objetivoUid);
     const desc = descriptor(est, c, ac);
     const r = resultadoAtaque(c, ac, desc);
+    aplicarEscudo(est, c, ac);
+    romperGorro(c, actor, "ataca");
     if (desc.hechizo) gastarConjuro(est, c, actor, desc.hechizo);
     gastarCosto(c, ac, { ataque: !desc.hechizo, ligera: desc.atk && desc.atk.pj && esLigera(desc.atk.arma), armaId: desc.atk && desc.atk.arma && desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
@@ -2050,6 +2336,8 @@ window.Acciones = (function () {
     const obj = participante(c, ac.objetivoUid);
     const desc = descriptor(est, c, ac);
     const r = resultadoAtaque(c, ac, desc);
+    aplicarEscudo(est, c, ac);
+    romperGorro(c, actor, "ataca");
     const { final, nota } = R.aplicarDefensas(desc.modAtributo, desc.atk.arma.tipoDano, defensasDe(obj));
     gastarCosto(c, ac, { ataque: true, ligera: esLigera(desc.atk.arma), armaId: desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
@@ -2068,6 +2356,7 @@ window.Acciones = (function () {
       : null;
     if (grupos && D.sumaGrupo(grupos[0].caras, ac.valores.dano || []) == null) return;
     gastarCosto(c, ac, { ataque: Boolean(ac.sustituyeAtaque) });
+    if (grupos) romperGorro(c, actor, "causa daño");
     if (h) {
       if (h.concentracion) iniciarConcentracion(c, actor, h);
       gastarConjuro(est, c, actor, h);
@@ -2107,7 +2396,7 @@ window.Acciones = (function () {
         p.efectos.push({ tipo: "aceite", nombre: "Aceite" });
         txt += " · queda cubierto de aceite";
       }
-      if (!supera && fuente.condicion) txt += ` · ${anadirCondicion(p, fuente.condicion, h && h.concentracion ? actor : null)}`;
+      if (!supera) condicionesDe(fuente).forEach((cond) => { txt += ` · ${anadirCondicion(p, cond, h && h.concentracion ? actor : null)}`; });
       if (!supera && !fuente.condicion && fuente.efectoAlFallar && !fuente.aceite) txt += ` · ${fuente.efectoAlFallar}`;
       lineas.push(txt);
     });
@@ -2148,7 +2437,8 @@ window.Acciones = (function () {
     if (suma == null) return;
     const total = suma + f.fijo;
     gastarCosto(c, ac);
-    if (f.item) f.item.usado = true;
+    if (f.item && f.usoDiario) f.item.usadoHoy = true;
+    else if (f.item) f.item.usado = true;
     if (f.hechizo) gastarConjuro(est, c, actor, f.hechizo);
     if (f.recurso) Recursos.gastar(est, datosDe(actor), f.recurso);
     const nota = curar(obj, total);
@@ -2226,6 +2516,18 @@ window.Acciones = (function () {
       if (supera) log(c, `${p.nombre} mantiene la concentración en ${pe.nombre} (${total} vs CD ${pe.cd})`);
       else terminarConcentracion(c, p, `falla la salvación: ${total} vs CD ${pe.cd}`);
       c.ultimo = { clase: supera ? "golpe" : "fallo", html: `${esc(p.nombre)} ${supera ? "mantiene" : "pierde"} la concentración en <b>${esc(pe.nombre)}</b> (${total} vs CD ${pe.cd}).` };
+      return;
+    }
+    if (pe.tipo === "veneno") {
+      let txt = `${pe.nombre} · ${p.nombre}: CON ${total} vs CD ${pe.cd} → ${supera ? "resiste el veneno" : "falla"}`;
+      if (!supera) {
+        const bruto = D.sumaGrupo(R.carasDe(pe.dano), pe.valores.veneno || []) || 0;
+        const { final, nota } = R.aplicarDefensas(bruto, pe.tipoDano, defensasDe(p));
+        txt += ` · ${final} de ${pe.tipoDano}${nota ? ` (${bruto}, ${nota})` : ""}${restarPG(c, p, final)} → ${p.pg}/${p.pgMax} PG`;
+        if (p.pg > 0) txt += ` · ${anadirCondicion(p, pe.condicion)}`;
+      }
+      log(c, txt);
+      c.ultimo = { clase: supera ? "fallo" : "golpe", html: esc(txt) };
       return;
     }
     // Castigo abrasador
