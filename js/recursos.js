@@ -53,6 +53,42 @@ window.Recursos = (function () {
     r.usos[id] = (r.usos[id] || 0) + n;
   }
 
+  // ---------- Hechizos preparados ----------
+  // Los de la sesión (editables en Preparar) o, si ese PJ no tiene copia guardada
+  // (p. ej. se eligió la partida antes de añadirlo), los de la partida.
+  function preparadosDe(est, pjId) {
+    const propios = est.preparados && est.preparados[pjId];
+    if (Array.isArray(propios)) return propios;
+    const partida = (window.DATA_PARTIDAS || []).find((p) => p.id === est.partidaId);
+    return (partida && partida.preparados && partida.preparados[pjId]) || [];
+  }
+
+  // ---------- Dados de golpe (tantos como el nivel; se recuperan todos con descanso largo) ----------
+  function dadosGolpeTotales(pj) {
+    return pj.nivel || 1;
+  }
+
+  function dadosGolpeRestantes(est, pj) {
+    return Math.max(0, dadosGolpeTotales(pj) - (de(est, pj.id).usos.dados_golpe || 0));
+  }
+
+  function gastarDadoGolpe(est, pj) {
+    const r = de(est, pj.id);
+    r.usos.dados_golpe = (r.usos.dados_golpe || 0) + 1;
+  }
+
+  // ---------- Recuperación arcana (mago): 1 espacio gastado, una vez por descanso largo ----------
+  function recuperacionArcanaDisponible(est, pj) {
+    const r = de(est, pj.id);
+    return Boolean(pj.recuperacionArcana) && !r.usos.recuperacion_arcana && (r.espacios[1] || 0) > 0;
+  }
+
+  function usarRecuperacionArcana(est, pj) {
+    const r = de(est, pj.id);
+    r.espacios[1] = Math.max(0, (r.espacios[1] || 0) - 1);
+    r.usos.recuperacion_arcana = 1;
+  }
+
   // ---------- Buffs que duran horas ----------
   function buffsLargos(est, pjId) {
     return (est.buffsLargos && est.buffsLargos[pjId]) || [];
@@ -101,7 +137,10 @@ window.Recursos = (function () {
   }
 
   return {
+    preparadosDe,
     inspiracion, ponerInspiracion,
+    dadosGolpeTotales, dadosGolpeRestantes, gastarDadoGolpe,
+    recuperacionArcanaDisponible, usarRecuperacionArcana,
     vida, guardarVida, espaciosTotales, espaciosLibres, gastarEspacio,
     definicion, total, restante, gastar,
     buffsLargos, guardarBuffLargo, quitarBuffLargo, descansoCorto, descansoLargo

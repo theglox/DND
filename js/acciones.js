@@ -11,6 +11,7 @@ window.Acciones = (function () {
   const HECHIZOS = window.DATA_HECHIZOS || [];
   const BUFFS = window.DATA_BUFFS || [];
   const OBJETOS = window.DATA_OBJETOS || [];
+  const ARMAS = window.DATA_ARMAS || [];
 
   const porId = (lista, id) => lista.find((x) => x.id === id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -46,6 +47,7 @@ window.Acciones = (function () {
       if (ef.caBase && /sin armadura/i.test(d.armadura || "")) ca = Math.max(ca, ef.caBase + R.mod(d.atributos.DES));
       if (ef.ca) extra += ef.ca;
     });
+    if (p.tipo === "pj" && d.escudo && !Objetos.equipoDe(Estado.get(), d).escudo) ca -= d.escudo;
     return ca + extra;
   }
 
@@ -103,6 +105,102 @@ window.Acciones = (function () {
     return (c.pendientes || []).find((p) => p.id === scope);
   }
 
+  // ---------- Efectos de cada condición (reglas 2024) ----------
+  const EFECTOS_CONDICION = {
+    Agarrado: "Velocidad 0. Desventaja al atacar a cualquiera que no sea quien le agarra. Con una acción puede intentar escapar (FUE (Atletismo) o DES (Acrobacias) contra la CD de escape).",
+    Apresado: "Velocidad 0. Puede atacar, pero con desventaja; los ataques contra él tienen ventaja. Desventaja en salvaciones de DES.",
+    Asustado: "Desventaja en pruebas y ataques mientras vea la fuente del miedo. No puede acercarse voluntariamente a ella.",
+    Cegado: "Falla las pruebas que requieran vista. Sus ataques tienen desventaja; los ataques contra él, ventaja.",
+    Derribado: "Solo puede arrastrarse o levantarse (cuesta la mitad de su velocidad). Sus ataques tienen desventaja. Contra él: ventaja a 5 ft, desventaja a distancia.",
+    Envenenado: "Desventaja en tiradas de ataque y pruebas de característica.",
+    Hechizado: "No puede atacar a quien le hechizó ni elegirle como objetivo de efectos dañinos.",
+    Ensordecido: "No oye: falla las pruebas que requieran oído.",
+    Invisible: "Sus ataques tienen ventaja; los ataques contra él, desventaja (si no pueden verle).",
+    Incapacitado: "No puede realizar acciones, acciones adicionales ni reacciones. Pierde la concentración. No puede hablar.",
+    Aturdido: "Incapacitado. Falla las salvaciones de FUE y DES. Los ataques contra él tienen ventaja.",
+    Paralizado: "Incapacitado y velocidad 0. Falla FUE y DES. Ataques contra él con ventaja; a 5 ft son críticos.",
+    Petrificado: "Incapacitado y velocidad 0. Falla FUE y DES. Resistencia a todo el daño. Ataques contra él con ventaja.",
+    Inconsciente: "Incapacitado, derribado y velocidad 0. Falla FUE y DES. Ataques contra él con ventaja; a 5 ft son críticos."
+  };
+  const VELOCIDAD_CERO = ["Agarrado", "Apresado", "Paralizado", "Petrificado", "Inconsciente"];
+
+  function velocidadDe(p) {
+    const d = datosDe(p);
+    return VELOCIDAD_CERO.some((x) => (p.condiciones || []).includes(x)) ? 0 : d.velocidad;
+  }
+
+  function renderCondicionesTurno(c, p) {
+    const conds = (p.condiciones || []).filter((x) => EFECTOS_CONDICION[x]);
+    if (!conds.length) return "";
+    const origen = (cond) => {
+      const uid = (p.origenes || {})[cond];
+      const q = uid && participante(c, uid);
+      return q ? ` <span class="sub">(por ${esc(q.nombre)})</span>` : "";
+    };
+    return `<div class="panel-condiciones">
+      ${conds.map((x) => `<div><b>${esc(x)}</b>${origen(x)}: ${esc(EFECTOS_CONDICION[x])}</div>`).join("")}
+    </div>`;
+  }
+
+  // Un agarre (y lo que depende de él, como el Cegado del mordisco del Engendro) termina
+  // si quien agarra cae o queda incapacitado.
+  function soltarAgarres(c) {
+    c.participantes.forEach((p) => {
+      Object.entries(p.origenes || {}).forEach(([cond, uid]) => {
+        const q = participante(c, uid);
+        if (q && !fuera(q) && q.pg > 0 && !INCAPACITANTES.some((x) => tiene(q, x))) return;
+        p.condiciones = (p.condiciones || []).filter((x) => x !== cond);
+        delete p.origenes[cond];
+        log(c, `${p.nombre} ya no está ${cond} (${q ? q.nombre : "su origen"} ya no puede mantenerlo)`);
+      });
+    });
+  }
+
+  // ---------- Iluminación, sentidos y cobertura ----------
+  const LUCES = {
+    normal: "Luz brillante",
+    tenue: "Luz tenue / niebla ligera",
+    oscuridad: "Oscuridad / niebla densa",
+    magica: "Oscuridad mágica"
+  };
+  const COBERTURAS = {
+    ninguna: { nombre: "Sin cobertura", ca: 0 },
+    media: { nombre: "Media (+2 CA)", ca: 2 },
+    tres: { nombre: "Tres cuartos (+5 CA)", ca: 5 },
+    total: { nombre: "Total (no se puede atacar)", ca: null }
+  };
+
+  // Sentidos a partir del texto de la ficha: "Visión en la oscuridad 60 ft", "Vista ciega 30 ft"
+  function sentidosDe(p) {
+    const t = String(datosDe(p).sentidos || "");
+    return { oscuridad: /oscuridad/i.test(t), ciega: /vista ciega/i.test(t) };
+  }
+
+  // ¿Puede ver con esta iluminación? (Cegado e Invisible se tratan aparte como condiciones)
+  function veConLuz(p, luz) {
+    if (luz === "normal" || luz === "tenue" || !luz) return true;
+    const s = sentidosDe(p);
+    if (s.ciega) return true;
+    return luz === "oscuridad" && s.oscuridad;
+  }
+
+  function renderEntorno(c) {
+    const luz = c.luz || "normal";
+    const nota = {
+      normal: "",
+      tenue: "Solo afecta a Percepción, no a los ataques.",
+      oscuridad: "Quien no ve ataca con desventaja; atacar a quien no te ve da ventaja. La visión en la oscuridad y la vista ciega sí ven.",
+      magica: "Ni la visión en la oscuridad ve: solo la vista ciega."
+    }[luz];
+    return `<div class="entorno ${luz !== "normal" ? "activo" : ""}">
+      <span>🌗 Iluminación</span>
+      <select data-accion="ac-luz" aria-label="Iluminación de la zona" title="Si alguien lleva antorcha, lámpara o el truco Luz, la zona cercana está iluminada">
+        ${Object.entries(LUCES).map(([k, v]) => `<option value="${k}" ${k === luz ? "selected" : ""}>${v}</option>`).join("")}
+      </select>
+      ${nota ? `<span class="sub">${esc(nota)}</span>` : ""}
+    </div>`;
+  }
+
   // ---------- Condiciones y marcas → ventaja / desventaja ----------
   const INCAPACITANTES = ["Incapacitado", "Aturdido", "Paralizado", "Inconsciente", "Petrificado"];
   const tiene = (p, cond) => (p.condiciones || []).includes(cond);
@@ -131,11 +229,16 @@ window.Acciones = (function () {
     const d = [];
     ["Cegado", "Envenenado", "Asustado", "Apresado", "Derribado"].forEach((x) => { if (tiene(actor, x)) d.push(`${actor.nombre} ${x}`); });
     if (tiene(actor, "Invisible")) v.push(`${actor.nombre} Invisible`);
+    const agarrador = (actor.origenes || {}).Agarrado;
+    if (tiene(actor, "Agarrado") && obj && agarrador && agarrador !== obj.uid) d.push(`${actor.nombre} Agarrado (ataca a otro)`);
     if (obj) {
       ["Cegado", "Apresado", "Paralizado", "Aturdido", "Inconsciente", "Petrificado"].forEach((x) => { if (tiene(obj, x)) v.push(`objetivo ${x}`); });
       if (tiene(obj, "Derribado")) (cuerpo ? v : d).push(`objetivo Derribado${cuerpo ? "" : " (a distancia)"}`);
       if (tiene(obj, "Invisible")) d.push("objetivo Invisible");
       marcasAplicables(c, actor, obj).forEach((m) => (m.tipo === "ventajaContra" ? v : d).push(m.nombre));
+      const luz = c.luz || "normal";
+      if (!veConLuz(actor, luz)) d.push(`${actor.nombre} no ve (${LUCES[luz].toLowerCase()})`);
+      if (!veConLuz(obj, luz)) v.push(`${obj.nombre} no le ve (${LUCES[luz].toLowerCase()})`);
     }
     const modo = v.length && !d.length ? "ventaja" : d.length && !v.length ? "desventaja" : "normal";
     return { modo, ventajas: v, desventajas: d };
@@ -304,12 +407,19 @@ window.Acciones = (function () {
     return txt;
   }
 
-  function anadirCondicion(p, cond, fuente) {
+  function anadirCondicion(p, cond, fuente, origenUid) {
     const d = datosDe(p);
     if ((d.inmuneCondiciones || []).includes(cond)) return `${p.nombre} es inmune a ${cond}`;
     p.condiciones = p.condiciones || [];
     if (!p.condiciones.includes(cond)) p.condiciones.push(cond);
     if (fuente && fuente.concentracion) fuente.concentracion.condiciones.push({ uid: p.uid, cond });
+    if (origenUid) (p.origenes = p.origenes || {})[cond] = origenUid;
+    // Incapacitado (y Aturdido, Paralizado, Petrificado, Inconsciente, que lo incluyen) rompe la concentración
+    // (terminarConcentracion ya lo anota en el registro)
+    if (p.concentracion && ["Incapacitado", "Aturdido", "Paralizado", "Petrificado", "Inconsciente"].includes(cond)) {
+      const c = Estado.get().combate;
+      if (c) terminarConcentracion(c, p, `queda ${cond}`);
+    }
     return `${p.nombre} queda ${cond}`;
   }
 
@@ -331,7 +441,8 @@ window.Acciones = (function () {
     if (p.muerte && p.pg === 0) {
       chips.push(`<span class="chip chip-caido" title="Salvaciones de muerte">✔${p.muerte.exitos} ✖${p.muerte.fallos}</span>`);
     }
-    if (p.concentracion) chips.push(`<span class="chip chip-conc" title="Concentración">◎ ${esc(p.concentracion.nombre)}</span>`);
+    if (p.concentracion) chips.push(`<span class="chip chip-conc" title="Concentración">◎ ${esc(p.concentracion.nombre)}
+      <button class="chip-x" data-accion="ac-fin-conc" data-uid="${esc(p.uid)}" aria-label="Terminar concentración" title="Terminar la concentración">×</button></span>`);
     (p.buffs || []).forEach((b) => {
       const def = porId(BUFFS, b.id);
       chips.push(`<span class="chip chip-buff">${esc(def ? def.nombre : b.id)}
@@ -341,13 +452,14 @@ window.Acciones = (function () {
     (p.condiciones || []).forEach((cond) => chips.push(`<span class="chip chip-cond">${esc(cond)}
       <button class="chip-x" data-accion="ac-quitar-cond" data-uid="${esc(p.uid)}" data-cond="${esc(cond)}" aria-label="Quitar ${esc(cond)}">×</button></span>`));
     if (p.estable) chips.push(`<span class="chip">Estable</span>`);
+    if (p.reaccionUsada) chips.push(`<span class="chip chip-reaccion" title="Ya usó su reacción; la recupera al inicio de su turno">↺ reacción usada</span>`);
     if (c) chips.push(chipsMarcas(c, p));
     return chips.join("");
   }
 
   // ---------- Hechizos ----------
   function hechizosDe(est, pj) {
-    return [...(pj.trucos || []), ...((est.preparados || {})[pj.id] || [])].map(hechizo).filter(Boolean);
+    return [...(pj.trucos || []), ...Recursos.preparadosDe(est, pj.id)].map(hechizo).filter(Boolean);
   }
 
   // Motivo por el que no se puede lanzar (o null).
@@ -363,6 +475,141 @@ window.Acciones = (function () {
       Recursos.gastarEspacio(est, datosDe(p), h.nivel);
       flags(c).espacio = true;
     }
+  }
+
+  // ---------- Economía de acciones (Acción, Acción adicional, Reacción) ----------
+  const NOMBRE_COSTO = {
+    accion: "Acción", ataque: "Ataque", mella: "Mella", adicional: "Adicional", reaccion: "Reacción"
+  };
+  const esLigera = (arma) => Boolean(arma) && (arma.propiedades || []).includes("ligera");
+
+  // Ataques por acción de Ataque: Ataque múltiple en enemigos; 1 en PJs de nivel 1.
+  function ataquesPorAccion(p) {
+    const d = datosDe(p);
+    if (p.tipo === "enemigo" && d.multiataque) return d.multiataque.ataques.length;
+    return d.ataquesPorAccion || 1;
+  }
+
+  // Cuántas lleva de esa arma según su inventario (p. ej. "Daga ×2"); 1 si no figura
+  function cantidadArma(p, arma) {
+    const ent = Objetos.inventarioDe(Estado.get(), datosDe(p)).find((e) => e.nombre === arma.nombre);
+    return ent ? ent.cantidad : 1;
+  }
+
+  function tieneMella(p) {
+    const d = datosDe(p);
+    return (d.maestrias || []).some((id) => (porId(ARMAS, id) || {}).maestria === "Mella");
+  }
+
+  // Coste de un ataque (o de algo que sustituye un ataque). null si ya no quedan recursos.
+  function costoAtaque(c, p, arma, { soloAtaque = false } = {}) {
+    const f = flags(c);
+    if (!f.accion) return "accion";
+    if (f.accionTipo === "ataque" && (f.ataques || 0) < ataquesPorAccion(p)) return "ataque";
+    // Ataque extra con arma ligera tras atacar con otra arma ligera
+    // (con otra arma ligera distinta; la misma solo si lleva dos, como las 2 dagas)
+    const otraArma = arma && (arma.id !== f.armaLigeraUsada || cantidadArma(p, arma) >= 2);
+    if (!soloAtaque && p.tipo === "pj" && f.ataqueLigero && esLigera(arma) && otraArma && !f.extraLigera) {
+      if (tieneMella(p) && !f.mella) return "mella";
+      if (!f.adicional) return "adicional";
+    }
+    return null;
+  }
+
+  function costoSimple(c, tipo) {
+    const f = flags(c);
+    if (tipo === "accion") return f.accion ? null : "accion";
+    if (tipo === "adicional") return f.adicional ? null : "adicional";
+    return tipo;
+  }
+
+  function tipoTiempo(tiempo) {
+    const t = String(tiempo || "");
+    if (t.startsWith("acción adicional")) return "adicional";
+    if (t.startsWith("reacción")) return "reaccion";
+    return "accion";
+  }
+
+  function motivoSinCosto(c) {
+    return flags(c).accion ? "acción ya usada" : "no disponible";
+  }
+
+  // Marca lo gastado al aplicar una acción. extra: { ataque, ligera }
+  function gastarCosto(c, ac, extra = {}) {
+    const f = flags(c);
+    switch (ac.costo) {
+      case "accion":
+        f.accion = true;
+        f.accionTipo = extra.ataque ? "ataque" : "otra";
+        f.ataques = extra.ataque ? 1 : 0;
+        break;
+      case "ataque":
+        f.ataques = (f.ataques || 0) + 1;
+        break;
+      case "mella":
+        f.mella = true;
+        f.extraLigera = true;
+        break;
+      case "adicional":
+        f.adicional = true;
+        if (ac.segundaArma) f.extraLigera = true;
+        break;
+      case "reaccion":
+        participante(c, ac.actorUid).reaccionUsada = true;
+        break;
+    }
+    if (extra.ataque && extra.ligera && (ac.costo === "accion" || ac.costo === "ataque")) {
+      f.ataqueLigero = true;
+      f.armaLigeraUsada = extra.armaId;
+    }
+  }
+
+  // Acciones adicionales que puede hacer ahora mismo (para el ⓘ)
+  function listaAdicionales(est, c, p) {
+    const d = datosDe(p);
+    const lista = [];
+    if (p.tipo === "enemigo") {
+      (d.accionesAdicionales || []).forEach((a) => lista.push([a.nombre, a.texto]));
+      return lista;
+    }
+    hechizosDe(est, d).forEach((h) => {
+      if (h.resolucion === "castigo") lista.push([h.nombre, "Justo después de golpear con un arma cuerpo a cuerpo (gasta 1 espacio)."]);
+      else if (tipoTiempo(h.tiempo) === "adicional") lista.push([h.nombre, `${h.nivel ? "Hechizo de nivel 1 (gasta 1 espacio)" : "Truco"}. ${h.texto}`]);
+    });
+    (d.recursos || []).forEach((r) => {
+      const def = (d.rasgos || []).find((x) => x.nombre.startsWith(r.nombre));
+      lista.push([`${r.nombre} (${Recursos.restante(est, d, r.id)}/${Recursos.total(d, r.id)})`, def ? def.texto : ""]);
+    });
+    if (Objetos.pocionesDe(d, est).length) lista.push(["Poción de curación", "Beberla o dársela a una criatura a 5 ft: 2d4 + 2 PG."]);
+    Objetos.armasDe(d, est).forEach(({ item }) => {
+      const o = item && Objetos.objetoDe(item);
+      if (o && o.activable && item.sintonizado) lista.push([`${o.activable.nombre === "Encendida" ? "Encender/apagar" : "Activar"} ${o.nombre}`, `+${o.activable.danoExtra.dado} de ${o.activable.danoExtra.tipo} al golpear mientras arde.`]);
+    });
+    const ligeras = Objetos.armasDe(d, est).filter(({ arma }) => esLigera(arma));
+    if (ligeras.length >= 2 || ligeras.some(({ arma }) => arma.id === "daga")) {
+      lista.push(["Ataque con arma ligera", `Tras atacar con un arma ligera, otro ataque con un arma ligera distinta (sin sumar el modificador al daño).${tieneMella(p) ? " Con Mella va dentro de la acción de Ataque, sin gastar la adicional." : ""}`]);
+    }
+    return lista;
+  }
+
+  function renderEconomia(est, c, p) {
+    const f = flags(c);
+    const maxAtaques = ataquesPorAccion(p);
+    const detalleAccion = f.accion
+      ? (f.accionTipo === "ataque" && maxAtaques > 1 ? `ataques ${f.ataques || 0}/${maxAtaques}` : "usada")
+      : "disponible";
+    const adicionales = listaAdicionales(est, c, p);
+    const info = `<span class="info-i" tabindex="0" aria-label="Acciones adicionales posibles">i
+      <span class="tooltip"><b>Acciones adicionales de ${esc(p.nombre)}</b>
+        ${adicionales.length ? `<ul>${adicionales.map(([n, t]) => `<li><b>${esc(n)}</b>${t ? ": " + esc(t) : ""}</li>`).join("")}</ul>` : "<p>No tiene acciones adicionales disponibles.</p>"}
+      </span></span>`;
+    const chip = (tipo, icono, nombre, usada, detalle) => `<button type="button" class="econ econ-${tipo} ${usada ? "usada" : ""}" data-accion="ac-econ" data-tipo="${tipo}"
+      title="${usada ? "Usada · clic para liberarla" : "Disponible · clic para marcarla como usada"}">${icono} ${nombre}<span class="econ-estado">${detalle}</span></button>`;
+    return `<div class="economia">
+      ${chip("accion", "●", "Acción", f.accion, detalleAccion)}
+      <span class="econ-grupo">${chip("adicional", "◆", "Acción adicional", f.adicional, f.adicional ? "usada" : "disponible")}${info}</span>
+      ${chip("reaccion", "↺", "Reacción", p.reaccionUsada, p.reaccionUsada ? "usada" : "disponible")}
+    </div>`;
   }
 
   function resumenConjuro(pj, h) {
@@ -381,7 +628,7 @@ window.Acciones = (function () {
   function ataquesDe(est, p) {
     const d = datosDe(p);
     if (p.tipo === "pj") {
-      return Objetos.armasDe(d, est).map(({ key, arma, item }) => {
+      return Objetos.armasEnMano(d, est).map(({ key, arma, item }) => {
         const comp = R.competente(d, arma);
         return {
           key, nombre: arma.nombre, arma, item, pj: true, competente: comp,
@@ -396,7 +643,7 @@ window.Acciones = (function () {
   function puedeCastigar(est, c, p, arma) {
     if (p.tipo !== "pj" || arma.tipo !== "cuerpo a cuerpo") return false;
     const h = hechizo("castigo_abrasador");
-    return ((est.preparados || {})[p.refId] || []).includes("castigo_abrasador") && h;
+    return Recursos.preparadosDe(est, p.refId).includes("castigo_abrasador") && h;
   }
 
   // Bonificador y grupos de dados de daño del ataque en curso.
@@ -416,8 +663,10 @@ window.Acciones = (function () {
     if (!atk) return null;
 
     if (atk.pj) {
-      const r = R.ataqueArma(d, atk.arma, { dosManos: ac.opciones.dosManos });
-      const grupos = [{ id: "arma", etiqueta: atk.arma.nombre, tipo: atk.arma.tipoDano, caras: R.carasDe(r.dano), fijo: r.danoMod, principal: true }];
+      const dosManos = Boolean(ac.opciones.dosManos) && Objetos.manosUsadas(est, d, atk.key) === 0;
+      const r = R.ataqueArma(d, atk.arma, { dosManos });
+      const fijo = ac.segundaArma ? Math.min(0, r.modAtributo) + (atk.arma.bonusDano || 0) : r.danoMod;
+      const grupos = [{ id: "arma", etiqueta: atk.arma.nombre, tipo: atk.arma.tipoDano, caras: R.carasDe(r.dano), fijo, principal: true }];
       const o = atk.item && Objetos.objetoDe(atk.item);
       if (o && o.activable && atk.item.sintonizado && atk.item.encendida) {
         grupos.push({ id: "activable", etiqueta: o.nombre, tipo: o.activable.danoExtra.tipo, caras: R.carasDe(o.activable.danoExtra.dado), fijo: 0 });
@@ -448,7 +697,7 @@ window.Acciones = (function () {
     if (!obj) return null;
     const { res, total } = tiradaD20("a", ac, "atk", actor, desc.bonus, "ataqueExtraDado");
     if (total == null) return null;
-    const ca = caDe(obj);
+    const ca = caDe(obj) + ((COBERTURAS[ac.cobertura] || {}).ca || 0);
     const pifia = res.natural === 1;
     const golpe = res.natural === 20 || (!pifia && total >= ca);
     // Golpe a 5 ft contra Paralizado o Inconsciente: crítico automático
@@ -586,8 +835,11 @@ window.Acciones = (function () {
     c.turnoFlags = {};
     c.recargaTiradas = {};
     c.salvMuerte = null;
+    c.oportunidad = null;
+    soltarAgarres(c);
     const p = participante(c, c.turnoUid);
     if (!p) return;
+    p.reaccionUsada = false;
     const d = datosDe(p);
     // Caducan las marcas "hasta el inicio de tu próximo turno" y las de criaturas caídas
     c.marcas = (c.marcas || []).filter((m) => {
@@ -626,6 +878,7 @@ window.Acciones = (function () {
     const partes = [];
     (c.pendientes || []).forEach((pe) => partes.push(renderPendiente(c, pe)));
     if (c.ultimo) partes.push(`<div class="resultado ${c.ultimo.clase || ""}">${c.ultimo.html}</div>`);
+    partes.push(renderEntorno(c));
     const caido = p.tipo === "pj" && p.pg === 0;
     if (p.tipo === "pj" && !caido) partes.push(renderRecursos(est, p));
     if (p.tipo === "enemigo") partes.push(renderRecargas(c, p));
@@ -634,9 +887,19 @@ window.Acciones = (function () {
       partes.push(renderSalvMuerte(c, p));
     } else {
       const incap = INCAPACITANTES.find((x) => tiene(p, x));
-      if (incap) partes.push(`<div class="aviso">${esc(p.nombre)} está <b>${esc(incap)}</b>: no puede realizar acciones ni reacciones.</div>`);
-      if (c.accion) partes.push(renderAccion(est, c, c.accion));
-      else partes.push(renderMenu(est, c, p));
+      partes.push(renderCondicionesTurno(c, p));
+      if (incap && !flags(c).forzarActuar && !c.accion) {
+        partes.push(`<div class="aviso bloqueo">
+          ⛔ ${esc(p.nombre)} está <b>${esc(incap)}</b>: no puede realizar acciones, acciones adicionales ni reacciones.
+          Pasa al siguiente turno.
+          <button class="btn btn-sm" data-accion="ac-forzar" title="Por si decides que sí puede actuar">Actuar igualmente</button>
+        </div>`);
+      } else {
+        partes.push(renderEconomia(est, c, p));
+        if (p.tipo === "pj" && !c.accion) partes.push(renderEquipo(est, c, p));
+        if (c.accion) partes.push(renderAccion(est, c, c.accion));
+        else partes.push(renderMenu(est, c, p), incap ? "" : renderOportunidad(est, c, p));
+      }
     }
 
     partes.push(renderManual(c));
@@ -649,7 +912,8 @@ window.Acciones = (function () {
     const tot = Recursos.espaciosTotales(d, 1);
     if (tot) {
       const libres = Recursos.espaciosLibres(est, d, 1);
-      chips.push(`<span class="chip" title="Espacios de conjuro de nivel 1">Espacios nv1 <b class="espacios">${"●".repeat(libres)}${"○".repeat(tot - libres)}</b></span>`);
+      chips.push(`<span class="chip chip-espacios ${libres ? "" : "agotados"}" title="Espacios de conjuro de nivel 1: ${libres} de ${tot}">
+        ✨ Espacios de conjuro <span class="gemas">${'<i class="gema llena"></i>'.repeat(libres)}${'<i class="gema"></i>'.repeat(tot - libres)}</span><b>${libres}/${tot}</b></span>`);
     }
     (d.recursos || []).forEach((r) => {
       chips.push(`<span class="chip">${esc(r.nombre)} <b>${Recursos.restante(est, d, r.id)}/${Recursos.total(d, r.id)}</b></span>`);
@@ -661,16 +925,19 @@ window.Acciones = (function () {
     return chips.length ? `<div class="chips recursos-turno">${chips.join("")}</div>` : "";
   }
 
-  function boton(accion, attrs, icono, nombre, detalle, deshabilitado) {
-    return `<button class="btn btn-accion" data-accion="${accion}" ${attrs} ${deshabilitado ? "disabled" : ""}>
-      <span class="accion-nombre">${icono} ${esc(nombre)}</span><span class="sub">${esc(detalle)}</span></button>`;
+  function boton(accion, attrs, icono, nombre, detalle, deshabilitado, costo, clase = "") {
+    const etiqueta = costo ? `<span class="coste coste-${costo}">${NOMBRE_COSTO[costo]}</span>` : "";
+    return `<button class="btn btn-accion ${clase}" data-accion="${accion}" ${attrs} ${deshabilitado ? "disabled" : ""}>
+      <span class="accion-nombre">${icono} ${esc(nombre)}${etiqueta}</span><span class="sub">${esc(detalle)}</span></button>`;
   }
 
   function renderMenu(est, c, p) {
     const d = datosDe(p);
-    const armas = [];
-    const conjuros = [];
-    const otras = [];
+    // Dos apartados según lo que cuesta cada cosa ahora mismo
+    const armas = [];        // Acción: ataques
+    const conjuros = [];     // Acción: conjuros
+    const otras = [];        // Acción: rasgos, objetos, acciones especiales
+    const adicionales = [];  // Acción adicional (incluye el 2º ataque con arma ligera)
 
     ataquesDe(est, p).forEach((a) => {
       let detalle;
@@ -684,55 +951,91 @@ window.Acciones = (function () {
         const extra = (a.accion.danoExtra || []).map((x) => ` + ${x.dado}`).join("");
         detalle = `${R.signo(a.accion.bonusAtaque)} · ${a.accion.dano}${extra}`;
       }
-      armas.push(boton("ac-atacar", `data-key="${esc(a.key)}"`, "⚔", a.nombre, detalle, sinMunicion));
+      const costo = costoAtaque(c, p, a.arma);
+      if (costo === "mella" || costo === "adicional") {
+        const r = R.ataqueArma(d, a.arma);
+        const fijo = Math.min(0, r.modAtributo) + (a.arma.bonusDano || 0);
+        detalle = `${R.signo(r.bonus)} · ${r.dano}${fijo ? " " + R.signo(fijo) : ""} · 2º ataque con arma ligera (sin mod. al daño)`;
+      }
+      if (!costo) detalle += " · " + motivoSinCosto(c);
+      (costo === "mella" || costo === "adicional" ? adicionales : armas)
+        .push(boton("ac-atacar", `data-key="${esc(a.key)}"`, "⚔", a.nombre, detalle, sinMunicion || !costo, costo));
     });
 
     if (p.tipo === "enemigo") {
       d.acciones.forEach((a, i) => {
         if (a.cd == null) return;
         const ok = disponible(c, p, i);
+        const costo = costoSimple(c, "accion");
         const etiqueta = a.recarga ? ` · recarga ${a.recarga}` : a.usosPorDia ? ` · ${a.usosPorDia}/día` : "";
-        otras.push(boton("ac-salvacion", `data-idx="${i}"`, "✦", a.nombre, `${a.salvacion} CD ${a.cd}${etiqueta}${ok ? "" : " · no disponible"}`, !ok));
+        otras.push(boton("ac-salvacion", `data-idx="${i}"`, "✦", a.nombre, `${a.salvacion} CD ${a.cd}${etiqueta}${ok ? "" : " · no disponible"}${costo ? "" : " · acción ya usada"}`, !ok || !costo, costo));
       });
     } else {
       hechizosDe(est, d).forEach((h) => {
         if (h.resolucion === "castigo") return;   // se usa desde el ataque con arma
-        const bloqueo = bloqueoConjuro(est, c, d, h);
-        conjuros.push(boton("ac-conjuro", `data-id="${esc(h.id)}"`, h.nivel ? "✨" : "✧",
-          h.nombre, `${h.nivel ? "nv1" : "truco"} · ${resumenConjuro(d, h)}${bloqueo ? " · " + bloqueo : ""}`, Boolean(bloqueo)));
+        const costo = costoSimple(c, tipoTiempo(h.tiempo));
+        const bloqueo = bloqueoConjuro(est, c, d, h) || (!costo && (tipoTiempo(h.tiempo) === "adicional" ? "acción adicional ya usada" : "acción ya usada"));
+        (tipoTiempo(h.tiempo) === "adicional" ? adicionales : conjuros).push(boton("ac-conjuro", `data-id="${esc(h.id)}"`, h.nivel ? "✨" : "✧",
+          h.nombre, `${h.nivel ? "nv1 · gasta 1 espacio" : "truco"} · ${resumenConjuro(d, h)}${bloqueo ? " · " + bloqueo : ""}`,
+          Boolean(bloqueo), costo, h.nivel ? "btn-conjuro-nivel" : "btn-truco"));
       });
       (d.recursos || []).forEach((r) => {
         const quedan = Recursos.restante(est, d, r.id);
         const info = r.id === "tomar_aliento" ? `acción adicional · 1d10 + ${d.nivel}` :
           r.id === "imposicion_manos" ? "acción adicional · reserva de PG" : "acción adicional";
-        otras.push(boton("ac-recurso", `data-id="${esc(r.id)}"`, "✚", r.nombre, `${info} · ${quedan}/${Recursos.total(d, r.id)}`, quedan === 0));
+        const costo = costoSimple(c, "adicional");
+        adicionales.push(boton("ac-recurso", `data-id="${esc(r.id)}"`, "✚", r.nombre, `${info} · ${quedan}/${Recursos.total(d, r.id)}${costo ? "" : " · acción adicional ya usada"}`, quedan === 0 || !costo, costo));
       });
       Objetos.usablesDe(est, d).forEach(({ entrada, def }) => {
         const cd = def.cd === "lanzador" ? cdLanzador(d) : def.cd;
         const info = def.uso === "salvacion" ? `${def.salvacion} CD ${cd}` : "estabiliza a 0 PG";
-        otras.push(boton("ac-objeto", `data-id="${esc(def.id)}"`, "🎒", def.nombre, `${def.tiempo} · ${info} · quedan ${entrada.cantidad}`));
+        const costo = def.tiempo === "sustituye un ataque" ? costoAtaque(c, p, null, { soloAtaque: true }) : costoSimple(c, tipoTiempo(def.tiempo));
+        (tipoTiempo(def.tiempo) === "adicional" ? adicionales : otras).push(boton("ac-objeto", `data-id="${esc(def.id)}"`, "🎒", def.nombre, `${def.tiempo} · ${info} · quedan ${entrada.cantidad}${costo ? "" : " · acción ya usada"}`, !costo, costo));
       });
       Objetos.pocionesDe(d, est).forEach((it) => {
         const o = Objetos.objetoDe(it);
-        otras.push(boton("ac-pocion", `data-uid="${esc(it.uid)}"`, "🧪", o.nombre, `acción adicional · ${o.curacion}`));
+        const costo = costoSimple(c, "adicional");
+        adicionales.push(boton("ac-pocion", `data-uid="${esc(it.uid)}"`, "🧪", o.nombre, `acción adicional · ${o.curacion}${costo ? "" : " · acción adicional ya usada"}`, !costo, costo));
       });
     }
 
-    const notas = [];
-    if (d.multiataque) notas.push(`<b>Ataque múltiple:</b> ${esc(d.multiataque.texto)}`);
+    const notasAccion = [];
+    const notasAdicional = [];
+    if (d.multiataque) notasAccion.push(`<b>Ataque múltiple:</b> ${esc(d.multiataque.texto)}`);
     if (p.tipo === "enemigo") {
-      d.acciones.filter((a) => a.bonusAtaque == null && a.cd == null).forEach((a) => notas.push(`<b>${esc(a.nombre)}:</b> ${esc(a.texto)}`));
-      (d.accionesAdicionales || []).forEach((a) => notas.push(`<b>${esc(a.nombre)} (acción adicional):</b> ${esc(a.texto)}`));
-    } else if (((est.preparados || {})[d.id] || []).includes("castigo_abrasador")) {
-      notas.push(`<b>Castigo abrasador:</b> se activa al golpear con un arma cuerpo a cuerpo (casilla en el ataque).`);
+      d.acciones.filter((a) => a.bonusAtaque == null && a.cd == null).forEach((a) => notasAccion.push(`<b>${esc(a.nombre)}:</b> ${esc(a.texto)}`));
+      (d.accionesAdicionales || []).forEach((a) => notasAdicional.push(`<b>${esc(a.nombre)}:</b> ${esc(a.texto)}`));
+    } else if (Recursos.preparadosDe(est, d.id).includes("castigo_abrasador")) {
+      notasAdicional.push(`<b>Castigo abrasador:</b> justo después de golpear con un arma cuerpo a cuerpo (casilla dentro del ataque).`);
     }
 
-    const seccion = (titulo, arr) => arr.length ? `<div class="menu-titulo">${titulo}</div><div class="menu-acciones">${arr.join("")}</div>` : "";
+    const f = flags(c);
+    const lista = (arr) => arr.length ? `<div class="menu-acciones">${arr.join("")}</div>` : "";
+    const sub = (titulo, arr) => arr.length ? `<div class="menu-subtitulo">${titulo}</div>${lista(arr)}` : "";
+    const notas = (arr) => arr.length ? `<ul class="rasgos notas-turno">${arr.map((n) => `<li>${n}</li>`).join("")}</ul>` : "";
+    const estadoAccion = f.accion
+      ? (f.accionTipo === "ataque" && (f.ataques || 0) < ataquesPorAccion(p) ? `ataques ${f.ataques}/${ataquesPorAccion(p)}` : "usada")
+      : "disponible";
+
     return `
-      ${seccion("Ataques", armas) || `<p class="muted">Sin ataques disponibles.</p>`}
-      ${seccion("Conjuros", conjuros)}
-      ${seccion(p.tipo === "pj" ? "Rasgos y objetos" : "Acciones especiales", otras)}
-      ${notas.length ? `<ul class="rasgos notas-turno">${notas.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}`;
+      <div class="bloque-menu bloque-accion ${f.accion && estadoAccion === "usada" ? "gastado" : ""}">
+        <div class="menu-titulo titulo-accion">● Acciones <span class="menu-estado">${estadoAccion}</span>
+          <span class="sub">una por turno: atacar, lanzar un conjuro, usar un objeto…</span></div>
+        ${sub("Ataques", armas)}
+        ${sub("Conjuros", conjuros)}
+        ${p.tipo === "pj" && Recursos.espaciosTotales(d, 1) && !hechizosDe(est, d).some((h) => h.nivel >= 1)
+          ? `<p class="sub aviso-texto">${esc(d.nombre)} no tiene hechizos de nivel 1 preparados. Elígelos en Preparar → Ficha de ${esc(d.nombre)}${est.partidaId ? "" : " (primero elige la partida)"}.</p>` : ""}
+        ${sub(p.tipo === "pj" ? "Rasgos y objetos" : "Acciones especiales", otras)}
+        ${!armas.length && !conjuros.length && !otras.length ? `<p class="muted">Sin acciones disponibles.</p>` : ""}
+        ${notas(notasAccion)}
+      </div>
+      <div class="bloque-menu bloque-adicional ${f.adicional ? "gastado" : ""}">
+        <div class="menu-titulo titulo-adicional">◆ Acciones adicionales <span class="menu-estado">${f.adicional ? "usada" : "disponible"}</span>
+          <span class="sub">una por turno, solo si algo te la concede</span></div>
+        ${lista(adicionales)}
+        ${!adicionales.length && !notasAdicional.length ? `<p class="muted">No tiene acciones adicionales disponibles ahora.</p>` : ""}
+        ${notas(notasAdicional)}
+      </div>`;
   }
 
   function renderSalvMuerte(c, p) {
@@ -793,6 +1096,80 @@ window.Acciones = (function () {
     log(c, txt);
     c.ultimo = { clase: p.muerto ? "fallo" : res.natural === 20 || total >= 10 ? "cura" : "fallo", html: esc(txt) };
     c.salvMuerte = null;
+  }
+
+  // Ataques cuerpo a cuerpo de una criatura (los únicos válidos como ataque de oportunidad)
+  function ataquesCuerpo(est, q) {
+    return ataquesDe(est, q).filter((a) => (a.pj ? a.arma.tipo === "cuerpo a cuerpo" : a.accion.tipo !== "distancia"));
+  }
+
+  // Quién puede hacer un ataque de oportunidad contra la criatura del turno (p)
+  function posiblesOportunidad(c, p) {
+    const lista = c.orden.map((u) => participante(c, u))
+      .filter((q) => q && q.uid !== p.uid && !fuera(q) && q.pg > 0 && !INCAPACITANTES.some((x) => tiene(q, x)));
+    // Primero el bando contrario al que se mueve
+    return [...lista.filter((q) => q.tipo !== p.tipo), ...lista.filter((q) => q.tipo === p.tipo)];
+  }
+
+  function eleccionOportunidad(est, c, p) {
+    const op = c.oportunidad || {};
+    const posibles = posiblesOportunidad(c, p);
+    let atacante = participante(c, op.atacanteUid);
+    if (!atacante || !posibles.includes(atacante)) {
+      atacante = posibles.find((q) => q.tipo !== p.tipo && !q.reaccionUsada) || posibles.find((q) => q.tipo !== p.tipo) || posibles[0];
+    }
+    const ataques = atacante ? ataquesCuerpo(est, atacante) : [];
+    const ataque = ataques.find((a) => a.key === op.ataqueKey) || ataques[0];
+    return { posibles, atacante, ataques, ataque };
+  }
+
+  function renderOportunidad(est, c, p) {
+    const { posibles, atacante, ataques, ataque } = eleccionOportunidad(est, c, p);
+    if (!posibles.length) return "";
+    const puede = atacante && !atacante.reaccionUsada && ataque;
+    const opcionesAtacante = posibles.map((q) => `<option value="${esc(q.uid)}" ${q === atacante ? "selected" : ""}>${esc(q.nombre)}${q.reaccionUsada ? " (reacción usada)" : ""}${q.tipo === p.tipo ? " · aliado" : ""}</option>`).join("");
+    const opcionesAtaque = ataques.map((a) => `<option value="${esc(a.key)}" ${a === ataque ? "selected" : ""}>${esc(a.nombre)}</option>`).join("");
+    return `
+      <details class="plegable oportunidad" ${c.oportunidadAbierto ? "open" : ""}>
+        <summary><span class="titulo-reaccion">↺ Ataque de oportunidad</span>
+          <span class="sub">reacción · cuando ${esc(p.nombre)} sale del alcance de alguien</span></summary>
+        <p class="sub" style="margin:8px 0">Una criatura que sale de tu alcance usando su movimiento provoca un ataque cuerpo a cuerpo que gasta tu <b>reacción</b>.
+          No lo provoca si usó <b>Destrabarse</b> (p. ej. la Huida ágil del goblin) ni si la mueven sin usar su movimiento.</p>
+        <div class="fila">
+          <select data-accion="ac-op-atacante" aria-label="Quién ataca">${opcionesAtacante}</select>
+          <select data-accion="ac-op-ataque" aria-label="Con qué ataca" ${ataques.length ? "" : "disabled"}>${opcionesAtaque || "<option>Sin ataques cuerpo a cuerpo</option>"}</select>
+          <button class="btn btn-sm btn-reaccion" data-accion="ac-oportunidad" ${puede ? "" : "disabled"}>Atacar a ${esc(p.nombre)}</button>
+        </div>
+        ${atacante && atacante.reaccionUsada ? `<p class="sub aviso-texto">${esc(atacante.nombre)} ya usó su reacción esta ronda.</p>` : ""}
+      </details>`;
+  }
+
+  // Armas en la mano, armas guardadas y escudo del PJ del turno
+  function renderEquipo(est, c, p) {
+    const d = datosDe(p);
+    const eq = Objetos.equipoDe(est, d);
+    const enMano = Objetos.armasEnMano(d, est);
+    const guardadas = Objetos.armasGuardadas(d, est);
+    const f = flags(c);
+    const manos = Objetos.manosUsadas(est, d);
+    const chips = enMano.map(({ key, arma }) => `<span class="chip chip-mano">✋ ${esc(arma.nombre)}${Objetos.manosArma(arma) === 2 ? " (2 manos)" : ""}
+      <button class="chip-x" data-accion="ac-guardar-arma" data-key="${esc(key)}" title="Guardar" aria-label="Guardar ${esc(arma.nombre)}">×</button></span>`).join("");
+    const escudo = d.escudo
+      ? `<button class="btn btn-sm ${eq.escudo ? "" : "btn-escudo-off"}" data-accion="ac-escudo" ${f.accion ? "disabled" : ""}
+          title="Ponerse o quitarse el escudo gasta la Acción (Utilizar)">🛡 ${eq.escudo ? "Quitarse el escudo" : "Ponerse el escudo"} <span class="coste coste-accion">Acción</span></button>`
+      : "";
+    return `
+      <div class="equipo-turno">
+        <span class="sub">En mano (${manos}/2):</span>
+        ${chips || `<span class="sub">manos vacías</span>`}
+        ${eq.escudo ? `<span class="chip chip-mano">🛡 Escudo +${d.escudo} CA</span>` : ""}
+        ${guardadas.length ? `<select data-ref="sacar-arma" aria-label="Arma para sacar">
+            ${guardadas.map(({ key, arma }) => `<option value="${esc(key)}">${esc(arma.nombre)}${Objetos.manosArma(arma) === 2 ? " (2 manos)" : ""}</option>`).join("")}
+          </select>
+          <button class="btn btn-sm" data-accion="ac-sacar-arma" title="Gratis: una al atacar, o con la interacción con un objeto del turno">Sacar</button>` : ""}
+        ${escudo}
+        ${(f.cambiosArma || 0) > 1 ? `<span class="sub aviso-texto">Más de un cambio de arma este turno: normalmente es uno por ataque o interacción.</span>` : ""}
+      </div>`;
   }
 
   function renderRecargas(c, p) {
@@ -863,13 +1240,17 @@ window.Acciones = (function () {
     const obj = participante(c, ac.objetivoUid);
     if (!desc || !obj) return `<p class="muted">Ataque no disponible (sin arma u objetivo).</p><button class="btn" data-accion="ac-cancelar">Volver</button>`;
     const { html: d20, res, extra } = tiradaD20("a", ac, "atk", actor, desc.bonus, "ataqueExtraDado");
-    const r = resultadoAtaque(c, ac, desc);
+    const r = ac.cobertura === "total" ? null : resultadoAtaque(c, ac, desc);
     const f = flags(c);
 
     const op = [];
     if (desc.atk && desc.atk.pj) {
       const arma = desc.atk.arma;
-      if (arma.versatil) op.push(check("dosManos", ac.opciones.dosManos, `A dos manos (${arma.versatil})`));
+      if (arma.versatil) {
+        const libre = Objetos.manosUsadas(est, d, desc.atk.key) === 0;
+        op.push(check("dosManos", ac.opciones.dosManos && libre,
+          `A dos manos (${arma.versatil})${libre ? "" : " · necesita la otra mano libre (sin escudo ni otra arma)"}`, !libre));
+      }
       const o = desc.atk.item && Objetos.objetoDe(desc.atk.item);
       if (o && o.activable) {
         op.push(desc.atk.item.sintonizado
@@ -884,12 +1265,14 @@ window.Acciones = (function () {
         const usado = f.salvaje && !ac.opciones.salvaje;
         op.push(check("salvaje", ac.opciones.salvaje, `Atacante salvaje: tira el daño del arma dos veces y usa el mayor${usado ? " · ya usado este turno" : ""}`, usado));
       }
-      if (puedeCastigar(est, c, actor, arma)) {
-        const bloqueo = !ac.opciones.castigo && bloqueoConjuro(est, c, d, hechizo("castigo_abrasador"));
+      if (!ac.oportunidad && puedeCastigar(est, c, actor, arma)) {
+        const bloqueo = !ac.opciones.castigo && (bloqueoConjuro(est, c, d, hechizo("castigo_abrasador")) || (f.adicional && "acción adicional ya usada"));
         op.push(check("castigo", ac.opciones.castigo, `Castigo abrasador al golpear (+1d6 fuego y arde; gasta 1 espacio, acción adicional)${bloqueo ? " · " + bloqueo : ""}`, Boolean(bloqueo)));
       }
       if (!desc.competente) op.push(`<span class="sub aviso-texto">Sin competencia con esta arma: no suma el bonificador de competencia.</span>`);
     }
+    const hechizador = (actor.origenes || {}).Hechizado;
+    if (tiene(actor, "Hechizado") && hechizador === obj.uid) op.push(`<span class="sub aviso-texto">Hechizado: no puede atacar a quien le hechizó.</span>`);
     const indefenso = desc.cuerpo && ["Paralizado", "Inconsciente"].find((x) => tiene(obj, x));
     if (indefenso) op.push(check("a5ft", ac.opciones.a5ft !== false, `A 5 ft de un objetivo ${indefenso}: si impacta, es crítico automático`));
     const sug = ac.sugerencia;
@@ -926,9 +1309,11 @@ window.Acciones = (function () {
     const rozar = r && !r.golpe && desc.maestria === "Rozar" && desc.modAtributo > 0
       ? `<button class="btn" data-accion="ac-rozar">Rozar: aplicar ${desc.modAtributo} de daño ${esc(desc.atk.arma.tipoDano)}</button>` : "";
     const verbo = desc.hechizo ? `lanza <b>${esc(desc.nombre)}</b> contra` : `ataca con <b>${esc(desc.nombre)}</b> a`;
+    const cabecera = ac.oportunidad ? `<div class="banner-reaccion">↺ Ataque de oportunidad · gasta la reacción de ${esc(actor.nombre)}</div>` : "";
 
     return `
-      <div class="accion-en-curso">
+      <div class="accion-en-curso ${ac.oportunidad ? "reaccion" : ""}">
+        ${cabecera}
         <div class="paso">
           <div class="fila">
             <span class="paso-etiqueta">${esc(actor.nombre)} ${verbo}</span>
@@ -937,7 +1322,15 @@ window.Acciones = (function () {
           ${op.length ? `<div class="opciones">${op.join("")}</div>` : ""}
         </div>
         <div class="paso">
-          <div class="paso-titulo">Tira <b>1d20 ${R.signo(desc.bonus)}${extra ? ` + ${esc(extra.dado)}` : ""}</b> · necesita <b class="objetivo-num">${caDe(obj)}</b> o más <span class="sub">(CA de ${esc(obj.nombre)})</span></div>
+          <div class="fila cobertura">
+            <span class="sub">Cobertura del objetivo</span>
+            <select data-accion="ac-cobertura" aria-label="Cobertura del objetivo">
+              ${Object.entries(COBERTURAS).map(([k, v]) => `<option value="${k}" ${k === (ac.cobertura || "ninguna") ? "selected" : ""}>${v.nombre}</option>`).join("")}
+            </select>
+          </div>
+          ${ac.cobertura === "total" ? `<div class="banner fallo">Cobertura total: no se le puede atacar directamente.</div>` : `
+          <div class="paso-titulo">Tira <b>1d20 ${R.signo(desc.bonus)}${extra ? ` + ${esc(extra.dado)}` : ""}</b> · necesita <b class="objetivo-num">${caDe(obj) + ((COBERTURAS[ac.cobertura] || {}).ca || 0)}</b> o más
+            <span class="sub">(CA de ${esc(obj.nombre)} ${caDe(obj)}${(COBERTURAS[ac.cobertura] || {}).ca ? ` + ${COBERTURAS[ac.cobertura].ca} por cobertura` : ""})</span></div>`}
           <div class="fila-tirada sin-borde">
             ${selectModo("a", "atk", ac.tiradas.atk.modo)}
             <div class="dados">${d20}</div>
@@ -1191,6 +1584,7 @@ window.Acciones = (function () {
     const obj = participante(c, ac.objetivoUid);
     if (!obj) return;
     obj.estable = true;
+    gastarCosto(c, ac);
     Objetos.gastarObjeto(est, datosDe(actor), ac.objeto);
     const txt = `${actor.nombre} estabiliza a ${obj.nombre} con el kit de sanador (quedan ${Objetos.cantidadDe(est, datosDe(actor), ac.objeto)} usos)`;
     log(c, txt);
@@ -1316,19 +1710,114 @@ window.Acciones = (function () {
     const ds = el.dataset;
 
     switch (accion) {
-      case "ac-atacar":
-        c.accion = nuevoAtaque(c, actor, { ataqueKey: ds.key });
+      case "ac-atacar": {
+        const atk = ataquesDe(est, actor).find((a) => a.key === ds.key);
+        const costo = costoAtaque(c, actor, atk && atk.arma);
+        if (!costo) break;
+        c.accion = nuevoAtaque(c, actor, { ataqueKey: ds.key, costo, segundaArma: costo === "mella" || costo === "adicional" });
         aplicarSugerencia(est, c, c.accion);
         c.ultimo = null;
         break;
-      case "ac-conjuro":
-        c.accion = nuevoConjuro(est, c, actor, hechizo(ds.id));
+      }
+      case "ac-conjuro": {
+        const h = hechizo(ds.id);
+        const costo = costoSimple(c, tipoTiempo(h.tiempo));
+        if (!costo) break;
+        c.accion = nuevoConjuro(est, c, actor, h);
+        c.accion.costo = costo;
         aplicarSugerencia(est, c, c.accion);
         c.ultimo = null;
         break;
+      }
+      case "ac-op-atacante":
+        c.oportunidad = { atacanteUid: el.value };
+        break;
+      case "ac-op-ataque":
+        c.oportunidad = { ...(c.oportunidad || {}), ataqueKey: el.value };
+        break;
+      case "ac-oportunidad": {
+        const { atacante, ataque } = eleccionOportunidad(est, c, actor);
+        if (!atacante || !ataque || atacante.reaccionUsada) break;
+        c.accion = nuevoAtaque(c, atacante, { ataqueKey: ataque.key, costo: "reaccion", oportunidad: true });
+        c.accion.objetivoUid = actor.uid;
+        c.oportunidad = null;      // el siguiente vuelve a proponer a alguien con reacción
+        aplicarSugerencia(est, c, c.accion);
+        c.ultimo = null;
+        break;
+      }
+      case "ac-sacar-arma": {
+        const d = datosDe(actor);
+        const key = el.closest(".equipo-turno").querySelector('[data-ref="sacar-arma"]').value;
+        const r = Objetos.equipar(est, d, key);
+        if (!r.ok) {
+          c.ultimo = { clase: "fallo", html: esc(r.error || "No se pudo sacar el arma.") };
+          break;
+        }
+        const f = flags(c);
+        f.cambiosArma = (f.cambiosArma || 0) + 1;
+        const nombre = Objetos.armasEnMano(d, est).find((a) => a.key === key).arma.nombre;
+        const txt = `${actor.nombre} saca ${nombre}${r.guardadas.length ? ` y guarda ${r.guardadas.join(", ")}` : ""}`;
+        log(c, txt);
+        c.ultimo = { clase: "", html: esc(txt) };
+        break;
+      }
+      case "ac-guardar-arma": {
+        const d = datosDe(actor);
+        const a = Objetos.armasEnMano(d, est).find((x) => x.key === ds.key);
+        Objetos.guardarArma(est, d, ds.key);
+        flags(c).cambiosArma = (flags(c).cambiosArma || 0) + 1;
+        if (a) log(c, `${actor.nombre} guarda ${a.arma.nombre}`);
+        break;
+      }
+      case "ac-escudo": {
+        const d = datosDe(actor);
+        const eq = Objetos.equipoDe(est, d);
+        const r = Objetos.ponerEscudo(est, d, !eq.escudo);
+        if (!r.ok) {
+          c.ultimo = { clase: "fallo", html: esc(r.error) };
+          break;
+        }
+        const f = flags(c);
+        f.accion = true;
+        f.accionTipo = "otra";
+        const txt = `${actor.nombre} ${eq.escudo ? "se pone" : "se quita"} el escudo (Acción) · CA ${caDe(actor)}`;
+        log(c, txt);
+        c.ultimo = { clase: "", html: esc(txt) };
+        break;
+      }
+      case "ac-luz":
+        c.luz = el.value;
+        log(c, `Iluminación: ${LUCES[c.luz]}`);
+        aplicarSugerencia(est, c, ac);
+        break;
+      case "ac-cobertura":
+        ac.cobertura = el.value;
+        break;
+      case "ac-forzar":
+        flags(c).forzarActuar = true;
+        log(c, `${actor.nombre} actúa pese a su condición (decisión del DM)`);
+        break;
+      case "ac-fin-conc": {
+        const p = participante(c, ds.uid);
+        if (p && p.concentracion) terminarConcentracion(c, p, "la termina voluntariamente");
+        break;
+      }
+      case "ac-econ": {
+        const f = flags(c);
+        if (ds.tipo === "accion") {
+          f.accion = !f.accion;
+          if (!f.accion) { f.accionTipo = null; f.ataques = 0; f.ataqueLigero = false; }
+          else f.accionTipo = "otra";
+        } else if (ds.tipo === "adicional") {
+          f.adicional = !f.adicional;
+        } else if (ds.tipo === "reaccion") {
+          actor.reaccionUsada = !actor.reaccionUsada;
+        }
+        break;
+      }
       case "ac-salvacion": {
         const primero = candidatos(c, actor)[0];
-        c.accion = nuevaAccion("salvacion", actor, { idx: Number(ds.idx), objetivos: [] });
+        c.accion = nuevaAccion("salvacion", actor, { idx: Number(ds.idx), objetivos: [], costo: "accion" });
         if (primero) alternarObjetivo(c, c.accion, primero.uid, true);
         c.ultimo = null;
         break;
@@ -1338,27 +1827,29 @@ window.Acciones = (function () {
         c.ultimo = null;
         if (def.uso === "estabilizar") {
           const caido = c.participantes.find((q) => q.tipo === "pj" && q.pg === 0 && !q.muerto && !q.estable);
-          c.accion = nuevaAccion("estabilizar", actor, { objeto: def.id, objetivoUid: caido ? caido.uid : null });
+          c.accion = nuevaAccion("estabilizar", actor, { objeto: def.id, objetivoUid: caido ? caido.uid : null, costo: costoSimple(c, "accion") });
         } else {
           const primero = candidatos(c, actor)[0];
-          c.accion = nuevaAccion("salvacion", actor, { objeto: def.id, objetivos: [] });
+          const costo = def.tiempo === "sustituye un ataque" ? costoAtaque(c, actor, null, { soloAtaque: true }) : costoSimple(c, tipoTiempo(def.tiempo));
+          c.accion = nuevaAccion("salvacion", actor, { objeto: def.id, objetivos: [], costo, sustituyeAtaque: def.tiempo === "sustituye un ataque" });
           if (primero) alternarObjetivo(c, c.accion, primero.uid, true);
         }
         break;
       }
       case "ac-pocion":
-        c.accion = nuevaAccion("curacion", actor, { fuente: { tipo: "item", uid: ds.uid }, objetivoUid: actor.uid });
+        c.accion = nuevaAccion("curacion", actor, { fuente: { tipo: "item", uid: ds.uid }, objetivoUid: actor.uid, costo: "adicional" });
         c.ultimo = null;
         break;
       case "ac-recurso":
         c.ultimo = null;
         if (ds.id === "tomar_aliento") {
-          c.accion = nuevaAccion("curacion", actor, { fuente: { tipo: "recurso", id: ds.id }, objetivoUid: actor.uid });
+          c.accion = nuevaAccion("curacion", actor, { fuente: { tipo: "recurso", id: ds.id }, objetivoUid: actor.uid, costo: "adicional" });
         } else if (ds.id === "imposicion_manos") {
-          c.accion = nuevaAccion("imposicion", actor, { objetivoUid: actor.uid, cantidad: 0 });
+          c.accion = nuevaAccion("imposicion", actor, { objetivoUid: actor.uid, cantidad: 0, costo: "adicional" });
         } else {
           const d = datosDe(actor);
           Recursos.gastar(est, d, ds.id);
+          flags(c).adicional = true;
           const def = Recursos.definicion(d, ds.id);
           log(c, `${actor.nombre} usa ${def.nombre} (quedan ${Recursos.restante(est, d, ds.id)})`);
           c.ultimo = { clase: "", html: `${esc(actor.nombre)} usa <b>${esc(def.nombre)}</b>.` };
@@ -1399,6 +1890,7 @@ window.Acciones = (function () {
         const item = (est.botin || []).find((it) => it.uid === ds.uid);
         if (item) {
           item.encendida = el.checked;
+          flags(c).adicional = true;
           log(c, `${actor.nombre} ${el.checked ? "enciende" : "apaga"} ${Objetos.objetoDe(item).nombre} (acción adicional)`);
         }
         break;
@@ -1445,6 +1937,7 @@ window.Acciones = (function () {
       case "ac-quitar-cond": {
         const p = participante(c, ds.uid);
         p.condiciones = (p.condiciones || []).filter((x) => x !== ds.cond);
+        if (p.origenes) delete p.origenes[ds.cond];
         log(c, `${p.nombre} ya no está ${ds.cond}`);
         break;
       }
@@ -1478,6 +1971,7 @@ window.Acciones = (function () {
     const res = calcularDano(desc.grupos, ac.valores, r.critico, defensasDe(obj), ac.opciones.salvaje);
     if (!res) return;
     if (desc.hechizo) gastarConjuro(est, c, actor, desc.hechizo);
+    gastarCosto(c, ac, { ataque: !desc.hechizo, ligera: desc.atk && desc.atk.pj && esLigera(desc.atk.arma), armaId: desc.atk && desc.atk.arma && desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
     gastarMunicion(est, c, actor, desc);
     const aceite = aceiteYFuego(c, obj, res.tipos);
@@ -1489,6 +1983,7 @@ window.Acciones = (function () {
 
     const extras = [];
     if (ac.opciones.castigo) {
+      flags(c).adicional = true;
       const h = hechizo("castigo_abrasador");
       gastarConjuro(est, c, actor, h);
       if (obj.pg > 0) {
@@ -1512,7 +2007,7 @@ window.Acciones = (function () {
       if (desc.hechizo && desc.hechizo.efectoAlGolpear) extras.push(desc.hechizo.efectoAlGolpear);
       if (desc.accion && desc.accion.efectoAlGolpear) extras.push(desc.accion.efectoAlGolpear);
       if (desc.accion && desc.accion.aplicaCondicionAlGolpear) {
-        desc.accion.aplicaCondicionAlGolpear.forEach((cond) => extras.push(anadirCondicion(obj, cond)));
+        desc.accion.aplicaCondicionAlGolpear.forEach((cond) => extras.push(anadirCondicion(obj, cond, null, actor.uid)));
       }
     }
 
@@ -1542,6 +2037,7 @@ window.Acciones = (function () {
     const desc = descriptor(est, c, ac);
     const r = resultadoAtaque(c, ac, desc);
     if (desc.hechizo) gastarConjuro(est, c, actor, desc.hechizo);
+    gastarCosto(c, ac, { ataque: !desc.hechizo, ligera: desc.atk && desc.atk.pj && esLigera(desc.atk.arma), armaId: desc.atk && desc.atk.arma && desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
     gastarMunicion(est, c, actor, desc);
     log(c, `${actor.nombre} → ${obj.nombre} con ${desc.nombre}: ${r.total} vs CA ${r.ca} ✖${r.pifia ? " (1 natural)" : ""}`);
@@ -1555,6 +2051,7 @@ window.Acciones = (function () {
     const desc = descriptor(est, c, ac);
     const r = resultadoAtaque(c, ac, desc);
     const { final, nota } = R.aplicarDefensas(desc.modAtributo, desc.atk.arma.tipoDano, defensasDe(obj));
+    gastarCosto(c, ac, { ataque: true, ligera: esLigera(desc.atk.arma), armaId: desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
     const extra = restarPG(c, obj, final);
     log(c, `${actor.nombre} → ${obj.nombre} con ${desc.nombre}: ${r.total} vs CA ${r.ca} ✖ · Rozar: ${final} ${desc.atk.arma.tipoDano}${nota ? " (" + nota + ")" : ""} · ${obj.nombre} ${obj.pg}/${obj.pgMax} PG${extra}`);
@@ -1570,6 +2067,7 @@ window.Acciones = (function () {
       ? [{ id: "dano", etiqueta: fuente.nombre, tipo: fuente.tipoDano, caras: R.carasDe(fuente.dano), fijo: R.parseDados(fuente.dano).fijo }]
       : null;
     if (grupos && D.sumaGrupo(grupos[0].caras, ac.valores.dano || []) == null) return;
+    gastarCosto(c, ac, { ataque: Boolean(ac.sustituyeAtaque) });
     if (h) {
       if (h.concentracion) iniciarConcentracion(c, actor, h);
       gastarConjuro(est, c, actor, h);
@@ -1625,6 +2123,7 @@ window.Acciones = (function () {
     const caras = R.carasDe(h.dano);
     const fijo = R.parseDados(h.dano).fijo;
     gastarConjuro(est, c, actor, h);
+    gastarCosto(c, ac);
     const porObjetivo = {};
     ac.dardos.forEach((uid, i) => {
       porObjetivo[uid] = (porObjetivo[uid] || 0) + D.sumaGrupo(caras, ac.valores["d" + i]) + fijo;
@@ -1648,6 +2147,7 @@ window.Acciones = (function () {
     const suma = D.sumaGrupo(f.caras, ac.valores.cura || []);
     if (suma == null) return;
     const total = suma + f.fijo;
+    gastarCosto(c, ac);
     if (f.item) f.item.usado = true;
     if (f.hechizo) gastarConjuro(est, c, actor, f.hechizo);
     if (f.recurso) Recursos.gastar(est, datosDe(actor), f.recurso);
@@ -1662,6 +2162,7 @@ window.Acciones = (function () {
     const h = hechizo(ac.conjuro);
     if (h.concentracion) iniciarConcentracion(c, actor, h);
     gastarConjuro(est, c, actor, h);
+    gastarCosto(c, ac);
     const nombres = ac.objetivos.map((uid) => {
       const p = participante(c, uid);
       anadirBuff(c, p, h.aplicaBuff, actor, h);
@@ -1678,6 +2179,7 @@ window.Acciones = (function () {
     const h = hechizo(ac.conjuro);
     const obj = ac.objetivoUid && participante(c, ac.objetivoUid);
     gastarConjuro(est, c, actor, h);
+    gastarCosto(c, ac);
     let txt = `${actor.nombre} lanza ${h.nombre}${obj ? " sobre " + obj.nombre : ""}`;
     if (h.id === "estabilizar" && obj && obj.tipo === "pj" && obj.pg === 0) {
       obj.estable = true;
@@ -1695,6 +2197,7 @@ window.Acciones = (function () {
     const coste = (ac.cantidad || 0) + (ac.veneno ? 5 : 0);
     if (coste <= 0 || coste > Recursos.restante(est, d, "imposicion_manos")) return;
     Recursos.gastar(est, d, "imposicion_manos", coste);
+    gastarCosto(c, ac);
     let txt = `${actor.nombre} usa Imposición de manos en ${obj.nombre}`;
     if (ac.cantidad) {
       const nota = curar(obj, ac.cantidad);
@@ -1755,5 +2258,5 @@ window.Acciones = (function () {
     }
   }
 
-  return { renderTurno, alIniciarTurno, alTerminarTurno, guardarDado, manejar, caDe, chipsEstado, CONDICIONES };
+  return { renderTurno, alIniciarTurno, alTerminarTurno, guardarDado, manejar, caDe, velocidadDe, chipsEstado, CONDICIONES };
 })();

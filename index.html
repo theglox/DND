@@ -12,6 +12,7 @@
     <section class="col col-historia" id="colHistoria" aria-label="Historia">
       <header class="col-header col-header-historia">
         <h2>Historia</h2>
+        <select id="selLibro" class="sel-libro" aria-label="Libro"></select>
         <select id="selSeccion" class="sel-seccion" aria-label="Ir a la sección" disabled>
           <option>Cargando secciones…</option>
         </select>
@@ -21,9 +22,10 @@
         </div>
         <nav class="saltos" id="saltos" aria-label="Saltos rápidos a las áreas"></nav>
         <div class="sonidos-barra" id="sonidosBarra" aria-label="Sonidos de la sección"></div>
+        <div class="panel-seccion-contenedor" id="panelSeccion" aria-label="Pruebas y botín de la sección"></div>
       </header>
       <div class="col-body col-body-historia">
-        <iframe id="frameHistoria" src="historia/historia.html" title="Historia de la campaña"></iframe>
+        <iframe id="frameHistoria" title="Historia de la campaña"></iframe>
       </div>
     </section>
 
@@ -34,6 +36,24 @@
     <!-- Pestaña para volver a mostrar la historia cuando está oculta -->
     <button class="historia-reabrir" id="btnMostrarHistoria" title="Mostrar historia" aria-label="Mostrar historia">
       <span>Historia</span> ⟩
+    </button>
+
+    <!-- ============ CENTRO: NARRADOR ============ -->
+    <section class="col col-narrador" id="colNarrador" aria-label="Narrador">
+      <header class="col-header">
+        <h2>Narrador</h2>
+        <div class="col-actions">
+          <button class="btn-icon" id="btnOcultarNarrador" title="Ocultar narrador" aria-label="Ocultar narrador">⟨</button>
+        </div>
+      </header>
+      <div class="col-body">
+        <div id="narrador"></div>
+      </div>
+    </section>
+
+    <!-- Pestaña para volver a mostrar el narrador cuando está oculto -->
+    <button class="narrador-reabrir" id="btnMostrarNarrador" title="Mostrar narrador" aria-label="Mostrar narrador">
+      <span>Narrador</span> ⟩
     </button>
 
     <!-- ============ DERECHA: COMBATE ============ -->
@@ -69,8 +89,12 @@
   <script src="data/partidas.js"></script>
   <script src="data/objetos.js"></script>
   <script src="data/sonidos.js"></script>
+  <script src="data/libros.js"></script>
+  <script src="data/secciones.js"></script>
+  <script src="data/narracion.js"></script>
 
   <!-- Lógica -->
+  <script src="js/dialogo.js"></script>
   <script src="js/reglas.js"></script>
   <script src="js/estado.js"></script>
   <script src="js/dados.js"></script>
@@ -80,6 +104,8 @@
   <script src="js/acciones.js"></script>
   <script src="js/combate.js"></script>
   <script src="js/sonidos.js"></script>
+  <script src="js/secciones.js"></script>
+  <script src="js/narrador.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

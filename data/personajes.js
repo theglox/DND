@@ -26,6 +26,7 @@ window.DATA_PJS = [
     inmuneA: ["Dormir mágico"],               // Trance
 
     competenciaArmas: { sencillas: true, marciales: "sutil_ligera" },
+    equipoInicial: { enMano: ["arma:espada_corta", "arma:daga"] },   // armas en la mano al empezar
     armas: ["espada_corta", "daga", "arco_corto"],
     maestrias: ["espada_corta", "daga", "arco_corto"],
     dotes: ["Alerta"],
@@ -101,6 +102,7 @@ window.DATA_PJS = [
     resistencias: [], inmunidades: [], vulnerabilidades: [],
 
     competenciaArmas: { sencillas: true, marciales: false },
+    equipoInicial: { enMano: ["arma:baston"] },   // armas en la mano al empezar
     armas: ["baston", "daga"],
     maestrias: [],
     dotes: ["Hábil", "Duro"],
@@ -109,6 +111,7 @@ window.DATA_PJS = [
     atributoConjuro: "INT",
     espaciosConjuro: { 1: 2 },
     maxPreparados: 4,
+    recuperacionArcana: true,                 // descanso corto: recupera 1 espacio (1/descanso largo)
     libroConjuros: ["rociada_de_color", "salto", "proyectil_magico", "armadura_de_mago", "dormir", "onda_atronadora"],
 
     rasgos: [
@@ -159,6 +162,7 @@ window.DATA_PJS = [
     resistencias: [], inmunidades: [], vulnerabilidades: [],
 
     competenciaArmas: { sencillas: true, marciales: true },
+    equipoInicial: { enMano: ["arma:gran_espada"] },   // armas en la mano al empezar
     armas: ["gran_espada", "mayal", "lanza", "jabalina", "ballesta_ligera"],
     maestrias: ["gran_espada", "mayal", "lanza", "jabalina", "ballesta_ligera"],
     dotes: ["Atacante salvaje", "Duro"],
@@ -228,6 +232,8 @@ window.DATA_PJS = [
     ventajaSalvacionContra: ["Envenenado"],
 
     competenciaArmas: { sencillas: true, marciales: true },
+    escudo: 2,                                // +2 CA (incluido en ca) mientras lo lleve puesto
+    equipoInicial: { enMano: ["arma:hacha_batalla"], escudo: true },   // armas en la mano al empezar
     armas: ["hacha_batalla", "maza"],
     maestrias: [],
     dotes: ["Duro"],
@@ -292,6 +298,8 @@ window.DATA_PJS = [
     suerteMediano: true,                      // repite los 1 naturales en pruebas de d20
 
     competenciaArmas: { sencillas: true, marciales: true },
+    escudo: 2,                                // +2 CA (incluido en ca) mientras lo lleve puesto
+    equipoInicial: { enMano: ["arma:espada_larga"], escudo: true },   // armas en la mano al empezar
     armas: ["espada_larga", "jabalina"],
     maestrias: ["espada_larga", "jabalina"],
     dotes: ["Hábil"],

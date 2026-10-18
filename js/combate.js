@@ -191,7 +191,7 @@ window.Combate = (function () {
           <div class="chips">
             ${p ? `<span class="chip">CA <b>${Acciones.caDe(p)}</b></span>
             <span class="chip">PG <b>${p.pg}/${p.pgMax}</b></span>
-            <span class="chip">${d.velocidad} ft</span>` : ""}
+            <span class="chip ${Acciones.velocidadDe(p) === 0 ? "chip-caido" : ""}" title="Velocidad">${Acciones.velocidadDe(p)} ft</span>` : ""}
             <span class="badge">Ronda ${c.ronda}</span>
           </div>
         </div>
@@ -443,7 +443,7 @@ window.Combate = (function () {
     "ac-resolver": "resolver efecto", "ac-muerte": "salvación de muerte", "ac-manual-dano": "daño manual",
     "ac-manual-cura": "curación manual", "ac-manual-cond": "añadir condición", "ac-estabilizar": "estabilizar",
     "ac-quitar-cond": "quitar condición", "ac-quitar-buff": "quitar buff", "ac-recurso": "rasgo",
-    "ac-encender": "encender arma", "ac-inspiracion": "inspiración"
+    "ac-encender": "encender arma", "ac-inspiracion": "inspiración", "ac-fin-conc": "terminar concentración", "ac-forzar": "actuar igualmente", "ac-sacar-arma": "sacar arma", "ac-guardar-arma": "guardar arma", "ac-escudo": "escudo"
   };
 
   function guardarParaDeshacer(accion) {
@@ -490,6 +490,8 @@ window.Combate = (function () {
       const abrir = !summary.parentElement.open;
       if (summary.parentElement.classList.contains("manual")) {
         Estado.actualizar((est) => { est.combate.manualAbierto = abrir; });
+      } else if (summary.parentElement.classList.contains("oportunidad")) {
+        Estado.actualizar((est) => { est.combate.oportunidadAbierto = abrir; });
       } else {
         refuerzosAbierto = abrir;
       }
@@ -520,23 +522,10 @@ window.Combate = (function () {
     }
 
     if (accion === "cancelar") {
-      if (!confirm("¿Terminar el combate en curso?")) return;
-      let recuperada = [];
-      Estado.actualizar((est) => {
-        // Tras el combate se recupera la mitad de la munición gastada
-        Object.entries(est.combate.municionGastada || {}).forEach(([k, n]) => {
-          const [pjId, nombre] = k.split("|");
-          const pj = porId(PJS, pjId);
-          const mitad = Math.floor(n / 2);
-          const ent = pj && Objetos.inventarioDe(est, pj).find((e) => e.nombre === nombre);
-          if (ent && mitad) {
-            ent.cantidad += mitad;
-            recuperada.push(`${pj.nombre}: ${mitad} ${nombre.toLowerCase()}`);
-          }
-        });
-        est.combate = null;
-      });
-      if (recuperada.length) alert("Munición recuperada tras el combate (la mitad de la gastada):\n" + recuperada.join("\n"));
+      Dialogo.confirmar("Se cerrará el combate. Los PG, espacios de conjuro y objetos gastados de los PJs se conservan.",
+        { titulo: "¿Terminar el combate?", aceptar: "Terminar combate", peligro: true })
+        .then((ok) => { if (ok) terminarCombate(); });
+      return;
     } else if (accion === "confirmar-ini") {
       confirmarIniciativa();
     } else if (accion === "volver-tirar") {
@@ -553,6 +542,28 @@ window.Combate = (function () {
       return;
     }
     render();
+  }
+
+  // Cierra el combate. Tras el combate se recupera la mitad de la munición gastada.
+  function terminarCombate() {
+    const recuperada = [];
+    Estado.actualizar((est) => {
+      Object.entries((est.combate && est.combate.municionGastada) || {}).forEach(([k, n]) => {
+        const [pjId, nombre] = k.split("|");
+        const pj = porId(PJS, pjId);
+        const mitad = Math.floor(n / 2);
+        const ent = pj && Objetos.inventarioDe(est, pj).find((e) => e.nombre === nombre);
+        if (ent && mitad) {
+          ent.cantidad += mitad;
+          recuperada.push(`${pj.nombre}: ${mitad} ${nombre.toLowerCase()}`);
+        }
+      });
+      est.combate = null;
+    });
+    render();
+    if (recuperada.length) {
+      Dialogo.aviso("Se recupera la mitad de la munición gastada:\n" + recuperada.join("\n"), "Munición recuperada");
+    }
   }
 
   // ---------- Arrastrar para reordenar ----------

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Grito de la Cosecha - Aventura Nivel 2</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Georgia', serif;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm 16mm;
+    page-break-after: always;
+    position: relative;
+    background: #fdf8f2;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* PORTADA */
+  .cover {
+    background: linear-gradient(180deg, #3a1508 0%, #8b3a1a 60%, #3a1508 100%);
+    color: #f5e6c8;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .cover .banner {
+    border: 6px double #d4af37;
+    padding: 30px 40px;
+    background: rgba(0,0,0,0.35);
+    margin-bottom: 40px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    color: #f5d78a;
+    text-shadow: 2px 2px 4px #000;
+    margin: 10px 0;
+    letter-spacing: 2px;
+  }
+  .cover .sub {
+    font-size: 18px;
+    color: #d4af37;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .cover .level {
+    font-size: 26px;
+    font-weight: bold;
+    color: #fff;
+    margin-top: 15px;
+    letter-spacing: 4px;
+  }
+  .cover .tagline {
+    font-style: italic;
+    color: #e0c088;
+    margin-top: 30px;
+    font-size: 14px;
+  }
+
+  /* TIPOGRAFÍA */
+  h2 {
+    color: #8b3a1a;
+    border-bottom: 3px solid #8b3a1a;
+    padding-bottom: 6px;
+    font-size: 22px;
+    margin-top: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  h3 {
+    color: #5a2810;
+    font-size: 17px;
+    margin: 18px 0 8px;
+    border-left: 5px solid #8b3a1a;
+    padding-left: 10px;
+  }
+  h4 {
+    color: #8b3a1a;
+    font-size: 15px;
+    margin: 14px 0 6px;
+    font-variant: small-caps;
+  }
+  p, li { font-size: 13px; line-height: 1.55; text-align: justify; }
+  ul, ol { padding-left: 22px; }
+
+  /* CAJAS ESPECIALES */
+  .box {
+    border: 2px solid #8b3a1a;
+    background: #fcefe3;
+    padding: 12px 16px;
+    margin: 12px 0;
+    border-radius: 4px;
+  }
+  .box.read {
+    border-left: 6px solid #5a2810;
+    background: #fbf2ea;
+    font-style: italic;
+    color: #2b0d02;
+  }
+  .box.secret {
+    border: 2px dashed #8a6d00;
+    background: #fffbe6;
+  }
+  .box.secret::before {
+    content: "🔒 ¡SECRETO DEL DM! ";
+    font-weight: bold;
+    color: #8a6d00;
+    font-style: normal;
+  }
+  .box.note {
+    border: 2px solid #b8860b;
+    background: #fff8dc;
+    font-family: 'Comic Sans MS', cursive;
+    font-size: 12.5px;
+    transform: rotate(-0.5deg);
+  }
+
+  /* TABLAS */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  th {
+    background: #8b3a1a;
+    color: #f5e6c8;
+    padding: 8px;
+    text-align: left;
+  }
+  td {
+    border: 1px solid #8b3a1a;
+    padding: 7px 10px;
+    background: #fdf8f2;
+  }
+  tr:nth-child(even) td { background: #fcefe3; }
+
+  /* CHECKLIST */
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li::before { content: "☐ "; color: #8b3a1a; font-weight: bold; }
+
+  .img-placeholder {
+    border: 2px dashed #999;
+    background: #f0ede8;
+    color: #666;
+    text-align: center;
+    padding: 30px 10px;
+    font-style: italic;
+    font-size: 12px;
+    margin: 14px 0;
+    border-radius: 4px;
+  }
+  .img-caption {
+    font-size: 11px;
+    font-style: italic;
+    text-align: center;
+    color: #555;
+    margin-top: -8px;
+    margin-bottom: 14px;
+  }
+  .footer {
+    position: absolute;
+    bottom: 8mm;
+    right: 16mm;
+    font-size: 10px;
+    color: #888;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PÁGINA 1: PORTADA ================= -->
+<div class="page cover">
+  <div class="banner">
+    <div class="sub">Folleto de Aventura</div>
+    <h1>Grito de<br>la Cosecha</h1>
+    <div class="level">Una aventura para<br>personajes de Nivel 2</div>
+  </div>
+  <p class="tagline">Esta aventura está diseñada para ocupar una o dos sesiones de juego.<br>
+  Si no usas el mapa de Greyhawkins, puede tener lugar cerca de cualquier asentamiento agrario.</p>
+</div>
+
+<!-- ================= PÁGINA 2: PUNTOS CLAVE + PREP + AYUDA + TRASFONDO ================= -->
+<div class="page">
+  <h2>Puntos clave de la trama</h2>
+  <p>Esta información es clave para la historia de la aventura:</p>
+  <p><strong>Punto de trama 1.</strong> Rillard Senior, un granjero local, contrata a los personajes para encontrar a su nieta desaparecida, Rilly June, e investigar una serie de sucesos inusuales en su granja.</p>
+  <p><strong>Punto de trama 2.</strong> Durante su búsqueda, los personajes tropiezan con una red de túneles bajo la Granja de la Familia Rillard.</p>
+  <p><strong>Punto de trama 3.</strong> Los personajes siguen los túneles hasta la fuente del problema: un árbol Guthlias, un retoño maligno engendrado a partir de la estaca de un vampiro asesinado. En el camino, los personajes se enfrentan a monstruos subterráneos y plantas vivientes corrompidas por el árbol Guthlias.</p>
+  <p><strong>Punto de trama 4.</strong> Los personajes encuentran a Rilly June y destruyen el árbol Guthlias y los sabuesos demoníacos que lo custodian.</p>
+
+  <h2>Preparación del DM</h2>
+  <p>Antes de dirigir la aventura, prepara lo siguiente:</p>
+  <ul class="checklist">
+    <li><strong>Paso 1.</strong> Lee la sección "Trasfondo de la aventura".</li>
+    <li><strong>Paso 2.</strong> Reúne el Folleto del cartel de persona desaparecida y el Mapa de los Túneles de la Granja.</li>
+    <li><strong>Paso 3.</strong> Reúne una ficha de personaje jugador por cada personaje del grupo.</li>
+    <li><strong>Paso 4.</strong> Reúne las cartas y fichas de monstruo: 1 Ankheg, Rilly June, 1 Plebeyo, 1 Espantapájaros, 3 Demodogs, 2 Enredaderas atrapantes, 3 Plagas aguja, 2 Hongos violeta.</li>
+    <li><strong>Paso 5.</strong> Reúne las cartas de objeto mágico: Dardo +1, Periapto de salud, Kukri empapado en veneno, Poción de resistencia (ácido).</li>
+  </ul>
+
+  <h2>Ayuda a los jugadores</h2>
+  <p>Puedes simplificar el papel del DM haciendo que los demás jugadores se encarguen de tareas típicamente asignadas al DM:</p>
+  <ul>
+    <li><strong>Rastreador de combate.</strong> Un jugador registra condiciones, PG e iniciativa.</li>
+    <li><strong>Encargados de monstruos.</strong> Uno o dos jugadores dirigen a los monstruos hostiles.</li>
+    <li><strong>Consultor de reglas.</strong> Un jugador consulta las reglas en la Guía de juego.</li>
+  </ul>
+
+  <h2>Trasfondo de la aventura</h2>
+  <p>En décadas pasadas, el vampiro Gunthar el Glotón aterrorizó a la gente de Goldenwheat. Gunthar y sus tres fieles sabuesos amenazaron con secar a los granjeros y su ganado. Cuando toda esperanza parecía perdida, un grupo de valientes héroes mató a Gunthar en su cripta y le clavó una estaca en el corazón. Salieron victoriosos de la cripta, sellándola tras de sí y dejando una estaca enterrada en el cadáver del vampiro.</p>
+  <p>Con el tiempo, la estaca empapada de sangre se deformó y germinó un árbol Guthlias, una planta infundida con esencia maligna. La malicia se extiende desde este árbol, destruyendo cultivos, corrompiendo el suelo y engendrando plantas despiertas con gusto por la sangre. El mal del árbol estuvo contenido durante un tiempo dentro de la cripta de Gunthar, y las granjas florecieron en una tierra que el vampiro había llenado de desesperación... hasta ahora.</p>
+  <p>Un ankheg hambriento de ganado local recientemente excavó hasta la cripta de Gunthar. Las raíces del árbol Guthlias se extendieron por los túneles del ankheg, infectándolos con plagas y hongos y echando a perder los cultivos de arriba. Las viles zarcillos del árbol incluso se abrieron camino hasta los cadáveres de los sabuesos de Gunthar. Devueltos a la vida y mutados por el árbol, estos perros sedientos de sangre custodian lealmente el lugar de descanso de su amo y destruyen a cualquiera que amenace el árbol Guthlias.</p>
+  <div class="footer">Grito de la Cosecha · Pág. 2</div>
+</div>
+
+<!-- ================= PÁGINA 3: COMIENZO + LLEGADA + PETICIÓN + EXPLORACIÓN ================= -->
+<div class="page">
+  <p>Un granjero local ha contactado a los personajes, esperando que puedan poner fin a la plaga que afecta a sus cultivos y a los de otras granjas cercanas. Si la enfermedad sigue extendiéndose, la escasez de alimentos resultante podría ser desastrosa.</p>
+
+  <h2>Comienzo de la aventura</h2>
+  <p>Las bucólicas colinas de Goldenwheat albergan campos de maíz, mares de grano y parcelas de calabazas rollizas. Situadas a lo largo de un sendero prominente en el sur de Greyhawkins, estas fértiles granjas abastecen regularmente a la región con cosechas abundantes. Al menos una granja, sin embargo, ha estado luchando recientemente.</p>
+  <p>Una plaga brutal ha golpeado la Granja de la Familia Rillard. Durante años, Rillard Senior, su nieta y sus peones han sido una fuente fiable de trigo, produciendo cientos de fanegas cada otoño. Si la plaga no se resuelve pronto, algunas ciudades podrían quedarse sin pan este invierno.</p>
+  <p>La aventura comienza en Goldenwheat y asume que los personajes ya han aceptado esta empresa heroica. Lee o parafrasea el siguiente texto para comenzar la aventura:</p>
+  <div class="box read">
+    Al coronar la colina hacia Goldenwheat, os recibe una imagen patética: una extensión estéril de tallos grises marchitos, calabazas colapsadas y tierra agrietada. Una brisa estancada barre las granjas, arrastrando el hedor de la descomposición.<br><br>
+    Cerca del camino, un espantapájaros de aspecto triste se desploma sobre su poste, con su podrida cabeza de calabaza colgando baja y plagada de moscas. Más adelante, un cartel de madera se balancea desde un poste torcido. Dice "Granja de la Familia Rillard". Más arriba por el camino, una pequeña casa de labranza se asienta entre los campos estériles.
+  </div>
+  <p>Si los personajes perturban al espantapájaros, este se desmorona. De lo contrario, cuando un personaje vuelva a mirarlo, el espantapájaros habrá desaparecido misteriosamente.</p>
+
+  <div class="box note">
+    El presagio es una de las habilidades más importantes en tu caja de herramientas de DM, pero los jugadores pueden desconcertarte. El espantapájaros que los personajes pasan aquí se supone que es el que encuentran más tarde en el túnel. Describe la granja, pero si lo tocan, tendrás que fingir que era un espantapájaros totalmente diferente. Insinúa el espantapájaros junto al camino sin hacerlo parecer <em>demasiado</em> interesante o importante. Ellos esperan la revelación jugosa.
+  </div>
+
+  <h2>Llegada a la Granja de la Familia Rillard</h2>
+  <p>La Granja de la Familia Rillard cultiva cosechas y cría ganado como parte del colectivo agrícola de Goldenwheat. Cuando los personajes lleguen a la casa de labranza, lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    La casa de los Rillard es un humilde hogar de dos plantas con un porche que la rodea. Un anciano mediano con sombrero de paja está sentado en una mecedora en el porche, mirando fijamente los campos plagados.<br><br>
+    La silla cruje mientras el mediano se levanta lentamente. Os examina mientras se rasca sus tupidas patillas y asiente con la cabeza. "Bien hallados", dice.<br><br>
+    "Vosotros parecéis un grupo de gente capaz. Soy Rillard Senior, pero podéis llamarme Viejo Rill. Odio admitirlo, pero mi granja y mi familia están en un buen lío. Espero que podáis ayudarnos. Estos viejos huesos no están hechos para la aventura."
+  </div>
+  <p>Rillard (Plebeyo Pequeño, Neutral Bueno) es un granjero de toda la vida que contrata periódicamente aventureros para ayudar en su granja y ahuyentar alimañas. Es Amistoso hacia los personajes y los trata con respeto. Después de una breve presentación, Rillard explica que han ocurrido sucesos extraños en su granja. Comparte los siguientes detalles:</p>
+  <p><strong>Cultivos plagados.</strong> Los cultivos de la granja están muriendo, incluso después de la intervención mágica de un mago viajero. Rillard no sabe la causa de la plaga.</p>
+  <p><strong>Persona desaparecida.</strong> La nieta de Rillard, Rilly June, está desaparecida. Rillard dice que es una chica dura que puede valerse por sí misma incluso después de un duro día de trabajo en la granja, pero está empezando a preocuparse. No la ha visto en dos días.</p>
+  <p><strong>Espantapájaros robados.</strong> Unos mocosos entrometidos han estado robando los espantapájaros de Rillard, cada uno de los cuales tiene una calabaza por cabeza. Si los personajes mencionan que vieron uno junto al camino, Rillard comenta que uno de sus espantapájaros fue arrancado de ese mismo lugar hace unos días, pero aún no lo había reemplazado. Bromea diciendo que el espantapájaros podría haberse "marchado por su propio pie".</p>
+  <p><strong>Ganado desaparecido.</strong> Alguien ha estado cazando furtivamente las novillas de Rillard. Cierra el granero todas las noches, pero una vaca desaparece cada dos noches.</p>
+
+  <h3>La petición de Rillard</h3>
+  <p>Rillard pide a los personajes que encuentren a su nieta e investiguen los sucesos inusuales en su granja. Les ofrece 200 PO por encontrar a Rilly June y desenterrar la fuente de la plaga.</p>
+  <p>Si los personajes aceptan, Rillard les proporciona un boceto de Rilly June que estaba planeando entregar a las autoridades. Entrega a tus jugadores el Cartel de persona desaparecida. Rillard también presta al grupo el Kukri empapado en veneno de su bisabuelo, con la esperanza de que les ayude en su exploración.</p>
+
+  <h3>Hora del cuento</h3>
+  <p>Si los personajes aceptan la misión de Rillard, él les agradece amablemente y dice que le recuerdan a los valientes héroes que salvaron estas tierras hace mucho tiempo. Rillard entonces relata brevemente la historia del vampiro Gunthar el Glotón, aunque no sabe nada de los túneles del ankheg ni del árbol Guthlias bajo su granja.</p>
+  <p>Rillard añade que algunos dicen que Gunthar maldijo estas tierras de cultivo con su último aliento, mientras que otros dicen que el vampiro aún las acecha. El viejo granjero cree que la historia se usa simplemente para asustar a los niños pequeños para que vuelvan a casa antes del anochecer.</p>
+
+  <h3>Explorando la granja</h3>
+  <p>Los personajes pueden investigar cualquiera de los eventos que Rillard observó, cada uno de los cuales los lleva a uno de los túneles bajo la granja. Rillard puede orientarlos de la siguiente manera:</p>
+  <p><strong>Cultivos plagados.</strong> Si los personajes van a los campos a investigar los cultivos, tropiezan con una entrada de túnel oculta detrás de una bala de trigo podrida. El túnel desciende hasta el área T1.</p>
+  <p><strong>Persona desaparecida.</strong> Si los personajes registran la casa de labranza en busca de pistas sobre el paradero de Rilly June, encuentran varias tablas sueltas en el sótano que, al levantarlas, revelan un túnel de tierra. El túnel desciende hasta el área T6.</p>
+  <p><strong>Espantapájaros robado.</strong> Si los personajes vuelven a donde vieron por última vez al espantapájaros, rápidamente encuentran un rastro de paja que conduce a un agujero en el suelo. Lleva al área T3.</p>
+  <p><strong>Ganado desaparecido.</strong> Si los personajes exploran el granero, encuentran un agujero bajo un montón de heno parcialmente derrumbado. Lleva al área T4.</p>
+
+  <div class="box note">
+    Escuchad, lo entiendo. Todo el mundo quiere adoptar a un PNJ amistoso para que los acompañe en una misión; demonios, los jugadores astutos incluso los usan como carne de cañón para la mazmorra. El caso es que aquí es donde puedes plantarte y decir: "No, el Viejo Rill no va con vosotros". Tiene como ochenta años.
+  </div>
+  <div class="footer">Grito de la Cosecha · Pág. 3</div>
+</div>
+
+<!-- ================= PÁGINA 4: TÚNELES + MAPA + T1 ================= -->
+<div class="page">
+  <div class="box note">
+    No es un verdadero rastreo de mazmorra si los jugadores pueden espiar cada túnel bajo la granja podrida. Cubre las áreas que aún no hayan explorado con lo que tengas por ahí: libros, papel, la tapa de una caja. Sinceramente, cualquier cosa sirve. Cuando reveles una habitación con un gran malo dentro, ¡planta esa Ficha de Monstruo de golpe y haz un gran espectáculo!
+  </div>
+
+  <h2>Túneles de la granja</h2>
+  <p>Bajo la Granja de la Familia Rillard yace una red de túneles excavados por un ankheg voraz. El ankheg excavó inadvertidamente en la cripta sellada de Gunthar el Glotón, desatando las raíces del árbol Gulthias que crece allí. Las raíces del árbol se han extendido rápidamente desde el lugar de descanso del vampiro muerto, invadiendo los túneles y liberando un brote de plagas para causar estragos en las granjas circundantes.</p>
+  <p>Cuando los personajes entren en los túneles, despliega el Mapa de los Túneles de la Granja y coloca las fichas de personaje jugador según el evento que investigaron. No coloques ninguna otra ficha todavía, ya que el contenido de los túneles no es visible para los personajes al principio.</p>
+
+  <h3>Características de los túneles</h3>
+  <p>A menos que se indique lo contrario, los túneles tienen las siguientes características:</p>
+  <ul>
+    <li><strong>Techos.</strong> Los techos tienen 10 pies de alto.</li>
+    <li><strong>Iluminación.</strong> Los túneles no están iluminados. Las criaturas dependen de la Visión en la oscuridad, la Visión cegadora o el Sentido sísmico para ver.</li>
+    <li><strong>Raíces y vides.</strong> Raíces y vides negras como la tinta, retorcidas, impregnan los túneles. Las áreas cubiertas de raíces son terreno difícil. Como acción de Estudiar, un personaje puede inspeccionar las plantas y hacer una prueba de Inteligencia (Arcano) CD 13; una prueba exitosa revela que la vegetación está corrompida por una fuerza sobrenatural maligna.</li>
+  </ul>
+
+  <div class="img-placeholder" style="padding: 60px 10px;">
+    🗺️ [MAPA 2: Túneles de la Granja — Versión del DM]<br>
+    1 casilla = 5 pies · Incluye fichas de monstruos y ubicaciones T1–T9
+  </div>
+  <p class="img-caption">Mapa 2: Túneles de la Granja (DM)</p>
+
+  <h3>T1: Túnel de entrada</h3>
+  <div class="box read">
+    Una niebla fina se eleva de un túnel de tierra. Vides negras y retorcidas se aferran a las paredes de tierra. Un aullido lejano y escalofriante resuena desde las profundidades.
+  </div>
+  <p>El aullido se originó en la cripta de Gunthar (área T9), donde residen los monstruosos sabuesos del difunto vampiro. Un personaje que escuche el aullido y tenga éxito en una prueba de Sabiduría (Naturaleza) CD 13 sabe que ningún perro o lobo ordinario puede producir tal sonido.</p>
+  <p>El túnel sale a un campo en la Granja de la Familia Rillard.</p>
+  <div class="footer">Grito de la Cosecha · Pág. 4</div>
+</div>
+
+<!-- ================= PÁGINA 5: T2 + T3 (INICIO) ================= -->
+<div class="page">
+  <h3>T2: Túnel infestado de hongos</h3>
+  <div class="box read">
+    Dos plantas con forma de gota y ramas de celosía púrpura brotan del suelo en este túnel. Sus zarcillos serpentean hacia el techo y se entrelazan con las vides que cubren cada superficie.
+  </div>
+
+  <div class="box secret">
+    No coloques aún las fichas de monstruo de las Enredaderas atrapantes. Estos monstruos están escondidos. Al comienzo del combate, cualquier personaje que no haya notado estas plagas tiene Desventaja en su tirada de iniciativa.
+  </div>
+
+  <p>Las plantas púrpuras son dos Hongos violeta. Dos Enredaderas atrapantes se esconden entre las raíces del Gulthias. Como acción de Buscar, un personaje puede inspeccionar el área y hacer una prueba de Sabiduría (Percepción) CD 15, detectando las plagas si tiene éxito. Los hongos y las plagas son Hostiles hacia todas las criaturas que no sean plantas. Si tal criatura se acerca a 10 pies o menos de las plantas o de otro modo las perturba, entran en combate.</p>
+
+  <h3>T3: Túnel lleno de esporas</h3>
+  <div class="box read">
+    Diminutas esporas blancas flotan en el aire de este túnel mohoso. Vides negras trepan hasta el techo, donde un colgante brillante cuelga de una raíz nudosa, reluciendo inocentemente. Espantapájaros se alzan en silencio por toda la cámara. Cada uno tiene una calabaza podrida por cabeza.
+  </div>
+
+  <div class="box secret">
+    No coloques aún la ficha de monstruo del Espantapájaros. Este monstruo está escondido. Al comienzo del combate, cualquier personaje que no haya notado al espantapájaros tiene Desventaja en su tirada de iniciativa.
+  </div>
+
+  <div class="footer">Grito de la Cosecha · Pág. 5</div>
+</div>
+
+<!-- ================= PÁGINA 6: T3 CONT + T4 + T5 + T6 (INICIO) ================= -->
+<div class="page">
+  <p>Aunque la mayoría de los espantapájaros en este túnel son inanimados, uno de ellos es un Espantapájaros Hostil. Permanece inmóvil, esperando emboscar a los personajes. Como acción de Estudiar, un personaje puede inspeccionar los espantapájaros y hacer una prueba de Inteligencia (Investigación) CD 15. Si tiene éxito, el personaje reconoce al espantapájaros viviente escondido entre los inanimados.</p>
+  <p>Si los personajes perturban el colgante o al espantapájaros, el espantapájaros comienza el combate, sorprendiendo a cualquier personaje que no lo haya identificado como una amenaza.</p>
+  <p><strong>Espantapájaros acechador.</strong> Si los personajes no luchan contra el espantapájaros en esta área, este los sigue después de que abandonen este túnel. Ataca cuando los personajes son más vulnerables, como inmediatamente después de un combate con el ankheg (ver área T5).</p>
+  <p>A tu discreción, si los personajes regresan más tarde a esta área, uno o más espantapájaros podrían haber desaparecido, sugiriendo que otros podrían estar cazándolos.</p>
+  <p><strong>Esporas tóxicas.</strong> Una nube de esporas tóxicas llena esta área. Cuando una criatura entra en el área, debe tener éxito en una tirada de salvación de Constitución CD 13 o queda Envenenada durante 1 minuto. Una criatura que falle la salvación la repite al final de cada uno de sus turnos, terminando el efecto sobre sí misma si tiene éxito. Una criatura que tenga éxito en su salvación es inmune al efecto de estas esporas durante 24 horas.</p>
+  <p><strong>Tesoro.</strong> El colgante que cuelga del techo es un Periapto de salud.</p>
+
+  <h3>T4: Nido del ankheg</h3>
+  <div class="box read">
+    El suelo de esta espaciosa cámara está diez pies más bajo que el de los tres túneles que se ramifican desde ella. Un hedor horrible se eleva del suelo, donde cadáveres de vacas en descomposición y huesos bovinos se retuercen bajo una red de raíces de otro mundo que se contraen lentamente.
+  </div>
+
+  <div class="box secret">
+    No coloques aún las fichas de monstruo de las Plagas aguja. Estos monstruos están escondidos. Al comienzo del combate, cualquier personaje que no haya notado estas plagas tiene Desventaja en su tirada de iniciativa.
+  </div>
+
+  <p>Los techos de esta cámara tienen 20 pies de alto. Los túneles que conducen a esta área terminan abruptamente en una caída de 10 pies. A lo largo del suelo hundido, raíces malévolas se enroscan alrededor de los restos de las comidas del ankheg.</p>
+  <p>Tres Plagas aguja se esconden entre las raíces y los cadáveres. Como acción de Buscar, un personaje puede examinar el suelo y hacer una prueba de Sabiduría (Percepción) CD 15, detectando las plagas si tiene éxito. Las plagas son Hostiles hacia los personajes. Si los personajes pisan las raíces o perturban los cadáveres, las plagas comienzan el combate.</p>
+  <p><strong>Cadáveres.</strong> Como acción de Estudiar, un personaje puede inspeccionar el ganado muerto y hacer una prueba de Sabiduría (Medicina) CD 13. Si tiene éxito, el personaje discierne que las vacas fueron asesinadas violentamente y arrastradas aquí por una criatura corpulenta con mandíbulas ácidas.</p>
+  <p>Un personaje que inspeccione los cadáveres puede hacer una prueba de Inteligencia (Arcano) CD 13. Si la prueba tiene éxito, el personaje se da cuenta de que esta área es un nido de ankheg.</p>
+  <p><strong>Tesoro.</strong> Entre los cadáveres hay un saco de arpillera que contiene un pan de dos días, tres manzanas, 5 PO y una Poción de resistencia (ácido). El saco tiene las iniciales "R.J." bordadas.</p>
+
+  <h3>T5: Cámara brumosa</h3>
+  <div class="box read">
+    Una niebla espesa llena esta húmeda cámara, que huele a tierra recién excavada. Bajos chasquidos quitinosos resuenan dentro de la niebla oscurecedora, acompañados por los sonidos de tierra removida y rocas repiqueteando.
+  </div>
+
+  <div class="box secret">
+    El ankheg tiene Sentido sísmico, lo que significa que no tiene problemas para orientarse a través de la niebla o para notar a los personajes cuando se acercan.
+  </div>
+
+  <p>Un Ankheg está usando sus mandíbulas para ensanchar lentamente esta cámara. Es Hostil hacia todas las demás criaturas y comienza el combate una vez que las detecta.</p>
+  <p><strong>Niebla.</strong> Este túnel está fuertemente oscurecido por la niebla.</p>
+
+  <h3>T6: Osario</h3>
+  <div class="box read">
+    Partículas luminiscentes flotan por toda esta cámara. Huesos cubren el suelo de tierra. Raíces deslizantes se abren camino sobre el cementerio y deconstruyen lentamente un esqueleto vestido con una armadura de cuero desgarrada.<br><br>
+    Las partículas se reúnen alrededor del guerrero muerto, centelleando mientras una voz descorporizada y resonante os llama. "¿Quién anda ahí? ¿Sois aventureros? He estado atrapada aquí un tiempo terriblemente largo. ¿Podéis liberarme?"
+  </div>
+
+  <div class="box secret">
+    No coloques aún las fichas de monstruo de las Enredaderas atrapantes. Estos monstruos son parte de las raíces del Árbol Gulthias y solo se manifiestan si esas raíces son atacadas.
+  </div>
+
+  <div class="box note">
+    Van a por el tesoro cada vez que dirijo esta. ¡Pensé que el espantapájaros era el que supuestamente no tenía cerebro!
+  </div>
+  <div class="footer">Grito de la Cosecha · Pág. 6</div>
+</div>
+
+<!-- ================= PÁGINA 7: T6 CONT + JUSTINE ================= -->
+<div class="page">
+  <div class="img-placeholder">🖼️ [Ilustración: Dos plagas emergen de una pared enmarañada de raíces]</div>
+  <p class="img-caption">Dos plagas emergen de una pared enmarañada de raíces para ocuparse de los intrusos.</p>
+
+  <p>La voz descorporizada es la de Justine Fobarb, una aventurera humana asesinada hace mucho tiempo. Su espíritu está atrapado dentro de sus restos enredados. Justine no tiene una Carta de monstruo y no puede ser objetivo de ningún ataque, conjuro u otro efecto. Es inicialmente Indiferente hacia los personajes, y promete compartir su historia una vez liberada.</p>
+  <p>Las raíces malignas del árbol Gulthias atan el espíritu de Justine a esta área. Un personaje que inspeccione las raíces y tenga éxito en una prueba de Inteligencia (Religión) CD 12 se da cuenta de que, al destruir las raíces, pueden liberar a Justine.</p>
+
+  <p><strong>Destruir las raíces.</strong> Las raíces del Gulthias tienen CA 10; PG 15; e Inmunidad al daño contundente, perforante y psíquico. Si las raíces reciben daño, lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    Las raíces chirrían y se retuercen de dolor. "¡Cuidado!", grita la voz descorporizada. Las vides a lo largo de las paredes del túnel comienzan a desprenderse y se enrollan en dos figuras bípedas que corren hacia vosotros. ¡Tirad iniciativa!
+  </div>
+  <p>Las dos Enredaderas atrapantes luchan contra los personajes. Si las raíces son destruidas, el espíritu de Justine pasa al más allá, pero no antes de advertir a los personajes de los peligros que acechan en estos túneles (ver "Lo que sabe Justine").</p>
+
+  <p><strong>Lo que sabe Justine.</strong> Si los personajes liberan el espíritu de Justine, su actitud mejora a Amistosa, y comparte la siguiente información:</p>
+  <p><strong>Ankheg.</strong> Un gran bicho escupidor de ácido recorre estos túneles. Caza al ganado de arriba y lo arrastra a su nido (área T4).</p>
+  <p><strong>Demodogs.</strong> El vampiro Gunthar tenía tres sabuesos sedientos de sangre. Mucho después de encontrar su fin, han regresado como monstruos caninos que custodian el lugar de descanso final de Gunthar (área T9).</p>
+  <p><strong>Árbol Gulthias.</strong> Un árbol Gulthias es una planta maldita que puede germinar de la estaca empapada en sangre de un vampiro asesinado. Justine cree que tal árbol crece en la cripta de Gunthar (área T9) y es la fuente de la plaga que envenena esta tierra. El fuego puede debilitar a un árbol Gulthias, pero la única forma de destruir verdaderamente este mal es desarraigarlo por completo.</p>
+
+  <div class="box note">
+    ¿Qué clase de aventureros despreciables abandonarían a un compañero de grupo cuando más los necesitaba? Pobre Justine. Nunca dividáis el grupo, chicos.
+  </div>
+  <div class="footer">Grito de la Cosecha · Pág. 7</div>
+</div>
+
+<!-- ================= PÁGINA 8: JUSTINE CONT + T7 + T8 ================= -->
+<div class="page">
+  <p><strong>Vampiro.</strong> Las leyendas sobre vampiros son ciertas. Hace mucho tiempo, el grupo de aventureros de Justine cazó a Gunthar y le clavó una estaca en el corazón. Pero Justine fue asesinada por uno de los esbirros de Gunthar, y sus compañeros de grupo la abandonaron en su búsqueda de gloria. El espíritu de Justine permaneció, esperando vanamente que regresaran; con el tiempo, las raíces se convirtieron en su jaula.</p>
+  <p>Después de que Justine comparta lo que sabe, las motas centelleantes se desvanecen, y el silencio cae sobre el túnel una vez más.</p>
+  <p><strong>Tesoro.</strong> Después de destruir las raíces, un personaje puede inspeccionar los restos de Justine. Alrededor del cuello de su esqueleto cuelga un emblema de plata de Heironeous, un dios de la caballería, el honor y la justicia. El emblema tiene forma de rayo y vale 25 PO.</p>
+
+  <h3>T7: Túnel cubierto de vides</h3>
+  <div class="box read">
+    Las paredes del túnel desaparecen tras una masa de vides negras serpenteantes. Dos criaturas bípedas cubiertas de espinas se interponen entre vosotros y la siguiente curva. Los guardianes espinosos se turnan para rascarse sus erizadas pieles con un rastrillo oxidado. Herramientas agrícolas están esparcidas por el suelo.
+  </div>
+
+  <div class="box secret">
+    No coloques aún las fichas de monstruo de las Enredaderas atrapantes. Estos monstruos están escondidos. Al comienzo del combate, cualquier personaje que no haya notado estas plagas tiene Desventaja en su tirada de iniciativa.
+  </div>
+
+  <p>Dos Plagas aguja usan un rastrillo robado para rascarse la espalda mutuamente en este túnel. Dos Enredaderas atrapantes se esconden entre las vides a lo largo de las paredes, esperando emboscar a cualquier criatura que no sea planta que pase por esta área. Las plagas son Hostiles hacia los personajes.</p>
+  <p>Como acción de Buscar, un personaje puede escanear las paredes cubiertas de vides y hacer una prueba de Sabiduría (Percepción) CD 15. Si tiene éxito, el personaje detecta a las enredaderas atrapantes.</p>
+  <p><strong>Tesoro.</strong> Entre las herramientas agrícolas oxidadas hay un par de guantes de jardinería, una azada, una pala y un anillo heredado que vale 10 PO.</p>
+
+  <h3>T8: Antecámara de la cripta</h3>
+  <div class="box read">
+    Os encontráis ante la entrada de una cripta enterrada. Vides gruesas cubren sus puertas de piedra desmoronadas, y raíces negras y nudosas se tejen por el suelo de la cámara. Cerca de las puertas, las vides envuelven a una peona mediana. Está inconsciente.
+  </div>
+
+  <div class="img-placeholder">🖼️ [Ilustración: Las raíces del árbol Gulthias inmovilizan a Rilly June]</div>
+  <p class="img-caption">Las raíces del árbol Gulthias inmovilizan a Rilly June.</p>
+
+  <p>Los aventureros que derrotaron a Gunthar sellaron las puertas de su cripta (área T9). Cuando el ankheg comenzó a excavar bajo la Granja de la Familia Rillard, demolió las puertas, desatando el árbol Gulthias y la plaga que trae.</p>
+  <p>La peona es Rilly June, la nieta de Rillard, a quien los personajes pueden identificar fácilmente gracias al boceto que les proporcionó su abuelo. Rilly June tiene las condiciones Apresada e Inconsciente, pero por lo demás está ilesa.</p>
+  <div class="footer">Grito de la Cosecha · Pág. 8</div>
+</div>
+
+<!-- ================= PÁGINA 9: LIBERAR A RILLY + T9 + CONCLUSIÓN ================= -->
+<div class="page">
+  <p><strong>Liberar a Rilly June.</strong> Como acción, un personaje puede hacer una prueba de Fuerza (Atletismo) CD 15 para liberar a Rilly June de las vides, lográndolo si tiene éxito. Una vez liberada, Rilly June se despierta y se presenta. Es Amistosa hacia los personajes y puede compartir la siguiente información:</p>
+  <p><strong>Túnel.</strong> Rilly June escuchó sonidos de excavación en el sótano de la casa de labranza, donde encontró un túnel. Siguió el túnel, con la esperanza de que pudiera revelar pistas sobre los cultivos plagados, pero fue emboscada por criaturas extrañas y traída aquí.</p>
+  <p><strong>Árbol inusual.</strong> Rilly June echó un vistazo a la cripta (área T9). De algún modo, hay un árbol creciendo bajo tierra allí.</p>
+  <p><strong>¡Tienes mi horca!</strong> Rilly June se ofrece como voluntaria para acompañar a los personajes mientras enfrentan la fuente de la plaga. Su granja está en peligro, así que tiene derecho a ayudar a defenderla.</p>
+  <p>Un personaje puede intentar convencer a Rilly June de que regrese a la superficie usando una acción de Influencia para hacer una prueba de Carisma (Persuasión) CD 15. Si tiene éxito, Rilly June regresa a regañadientes a la seguridad de la casa de labranza. De lo contrario, acompaña a los personajes durante el resto de esta aventura.</p>
+
+  <h3>T9: Cripta de Gunthar</h3>
+  <div class="box read">
+    Un árbol de corteza negra se cierne torcido sobre esta inquietante cripta. Las ramas nudosas del árbol presionan contra el techo de quince pies de altura, y su tronco retorcido se eleva desde la tapa astillada de un ataúd cerrado, enjaulado en raíces anudadas. Vides serpenteantes se retuercen a lo largo de las paredes de la cripta.<br><br>
+    Tres perros horribles con rostros sin ojos gruñen mientras caminan en círculos alrededor del árbol.
+  </div>
+  <p>Esta cripta perteneció una vez a Gunthar el Glotón. El árbol que sobresale del ataúd de Gunthar es un árbol Gulthias, brotado de la estaca clavada en el pecho del vampiro. Aunque el vampiro fue derrotado hace mucho tiempo, la magia del árbol resucitó a sus tres fieles sabuesos y los transformó en Demodogs. Los Demodogs son Hostiles hacia todas las criaturas que no sean plantas y defienden los restos de su amo.</p>
+  <p><strong>Árbol Gulthias.</strong> Este árbol Gulthias es un objeto Enorme que tiene CA 15; PG 50; Inmunidad al daño necrótico, de veneno y psíquico; y Vulnerabilidad al daño de fuego. Si el árbol queda reducido a 0 puntos de golpe, lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    El árbol chilla mientras se marchita y muere. El silencio cae sobre la cripta, pero el árbol permanece desafiante en su lugar, con sus raíces ancladas profundamente en la tierra.
+  </div>
+  <p>A menos que el árbol Gulthias sea desarraigado, vuelve a crecer en 3d10 días. Como acción de Estudiar, un personaje puede examinar el árbol y hacer una prueba de Inteligencia (Arcano) CD 13. Si tiene éxito, el personaje sabe que el árbol Gulthias volverá a crecer si se deja en la tierra.</p>
+  <p>Para desarraigar el árbol, un personaje debe tener éxito en una prueba de Fuerza (Atletismo) CD 15. Si Rilly June está con los personajes, realiza la acción de Ayudar para asistirlos en esta empresa.</p>
+  <p>Si el árbol es desarraigado, sus efectos terminan inmediatamente, y todas las Plagas aguja y Enredaderas atrapantes restantes dentro de los túneles mueren.</p>
+  <p><strong>Tesoro.</strong> Después de desarraigar el árbol Gulthias, los personajes pueden acceder al contenido del ataúd destrozado de Gunthar. En su interior están el cadáver desecado del vampiro y los siguientes objetos:</p>
+  <ul>
+    <li>Un Dardo +1 con forma de un extraño renacuajo</li>
+    <li>Un amuleto que luce una delicada araña de cristal, que vale 25 PO</li>
+    <li>Un pañuelo de seda azul con bordado dorado, que vale 5 PO</li>
+    <li>Una bolsa que contiene 50 PO</li>
+  </ul>
+  <p>Temiendo que estos objetos estuvieran malditos, los aventureros que mataron a Gunthar se negaron a tomarlos.</p>
+  <div class="footer">Grito de la Cosecha · Pág. 9</div>
+</div>
+
+<!-- ================= PÁGINA 10: CONCLUSIÓN + RECOMPENSA + AVANCE ================= -->
+<div class="page">
+  <h2>Conclusión</h2>
+  <p>Cuando los personajes regresen a la casa de labranza, Rillard los espera en el porche delantero. Cómo los salude depende de si su nieta llegó a casa sana y salva.</p>
+  <p>Si los personajes rescataron a Rilly June de los túneles bajo la granja, Rillard está eufórico al verlos. Lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    Mientras os acercáis a la casa de labranza, Rillard salta de su mecedora. "Que me tiren de las patillas y me llamen pan de maíz. ¡Resulta que los verdaderos héroes aún existen!", exclama.<br><br>
+    Rillard se toca el sombrero. "Habéis hecho a mi familia y a esta granja un favor inconmensurable. ¿Por qué no entráis y descansáis un rato? Tengo sopa de calabaza en el horno. Os la habéis ganado."
+  </div>
+
+  <div class="box note">
+    Si Rilly June acompaña a los personajes en su misión para acabar con la plaga, puedes dirigir a Rilly June tú mismo o dar su Carta de monstruo a otro jugador. Los PNJ como ella son una gran manera de ofrecer pistas o conocimiento del mundo. Intenta no dejar que los maten.
+  </div>
+
+  <div class="img-placeholder">🖼️ [Ilustración: Los tres sabuesos de Gunthar custodian los restos del vampiro en la cripta]</div>
+  <p class="img-caption">Transformados por la magia del árbol Gulthias, los tres miserables sabuesos de Gunthar custodian los restos del vampiro.</p>
+
+  <p>Rillard invita a los personajes a quedarse a pasar la noche y disfrutar de una comida casera. Les paga antes de que partan hacia su próxima aventura. Rilly June y su abuelo invitan a los personajes a volver a la granja cuando quieran, ofreciendo alojamiento gratuito y cómodo y una comida caliente siempre que los personajes se pasen.</p>
+  <p>Si los personajes regresan sin Rilly June, lee o parafrasea el siguiente texto:</p>
+  <div class="box read">
+    Mientras os acercáis a la casa de labranza, divisáis a Rillard en la misma vieja mecedora. No se ha movido desde que os marchasteis.<br><br>
+    Rillard baja la cabeza decepcionado. "Solos, ya veo", murmura. "Supongo que los héroes ya no son lo que solían ser."
+  </div>
+  <p>Si Rilly June encontró su fin en los túneles bajo la granja, la recompensa de Rillard es la misma, pero paga a los personajes solemnemente y no los invita a quedarse. De lo contrario, Rillard insta a los personajes a regresar a los túneles y rescatar a su nieta.</p>
+
+  <h2>Recompensa de Rillard</h2>
+  <p>Rillard paga a los personajes 200 PO como prometió. También deja que los personajes se queden con el Kukri empapado en veneno de su bisabuelo.</p>
+
+  <h2>Avance de personaje</h2>
+  <p>Después de que los personajes reciban la recompensa de Rillard, todos en el grupo ganan <strong>1 nivel</strong>. Entrega a cada jugador la Hoja de personaje de nivel 3 para su personaje y haz que registren cualquier tesoro que encontraron durante esta aventura en el reverso de esa hoja.</p>
+
+  <div class="box note">
+    Recompensa a los jugadores que piensan fuera de la caja. Se llama la Regla del Mola, también conocida como la Regla de No-Seas-Un-Cuadrado. Toma el árbol Gulthias, por ejemplo. Si los personajes quieren lanzar un conjuro para romper las raíces, realizar un ritual para romper la magia del árbol, o atraer a las gaviotas para derretirlo con ácido, ¡abraza su creatividad!<br><br>
+    Esta es tu mesa ahora, y tú haces las reglas. No dejes que se interpongan en el camino de una buena diversión. Mientras todos se diviertan, no hay forma incorrecta de jugar a D&D.
+  </div>
+  <div class="footer">Grito de la Cosecha · Pág. 10 · FIN</div>
+</div>
+
+<!-- Navegación por secciones para el Asistente de combate (no cambia el contenido) -->
+<script src="navegacion.js"></script>
+</body>
+</html>

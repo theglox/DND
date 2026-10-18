@@ -70,8 +70,19 @@ window.Sonidos = (function () {
   }
 
   // ---------- Render ----------
+  let libro = null;
+
+  // Sonidos de una sección del libro abierto (acepta también el formato antiguo sin libros)
   function sonidosDe(id) {
-    return (CFG.secciones && CFG.secciones[id]) || [];
+    const mapa = (CFG.libros && CFG.libros[libro]) || CFG.secciones || {};
+    return mapa[id] || [];
+  }
+
+  function setLibro(id) {
+    if (id === libro) return;
+    libro = id;
+    seccion = null;
+    render();
   }
 
   // Sonidos que siguen sonando pero son de otra sección (para poder pararlos desde aquí)
@@ -144,5 +155,5 @@ window.Sonidos = (function () {
     render();
   }
 
-  return { init, alCambiarSeccion, pararTodo };
+  return { init, alCambiarSeccion, setLibro, pararTodo };
 })();

@@ -58,18 +58,20 @@ window.Preparar = (function () {
 
   function importar(archivo) {
     const lector = new FileReader();
-    lector.onload = () => {
+    lector.onload = async () => {
       let datos;
       try {
         datos = JSON.parse(lector.result);
       } catch (e) {
-        alert("El archivo no es un JSON válido.");
+        Dialogo.aviso("El archivo no es un JSON válido.", "No se pudo importar");
         return;
       }
       const nuevo = datos && datos.estado ? datos.estado : datos;
-      if (!confirm(`¿Cargar "${archivo.name}"? Se reemplazará la partida actual de este navegador.`)) return;
+      const ok = await Dialogo.confirmar(`Se reemplazará la partida actual de este navegador por "${archivo.name}".`,
+        { titulo: "¿Importar partida?", aceptar: "Importar" });
+      if (!ok) return;
       if (!Estado.reemplazar(nuevo)) {
-        alert("El archivo no parece una partida exportada desde esta app.");
+        Dialogo.aviso("El archivo no parece una partida exportada desde esta app.", "No se pudo importar");
         return;
       }
       render();
@@ -109,15 +111,115 @@ window.Preparar = (function () {
         <div class="card-head">
           <h3>Personajes en la sesión</h3>
           <div class="chips">
-            <button class="btn btn-sm" data-accion="descanso-corto" title="Recupera 1 uso de Tomar aliento">Descanso corto</button>
-            <button class="btn btn-sm" data-accion="descanso-largo" title="PG al máximo, espacios y rasgos recuperados, fin de Armadura de mago">Descanso largo</button>
+            <button class="btn btn-sm" data-accion="descanso-corto" title="Dados de golpe, Recuperación arcana y 1 uso de Tomar aliento">Descanso corto</button>
+            <button class="btn btn-sm" data-accion="descanso-largo" title="PG, dados de golpe, espacios y rasgos recuperados; fin de Armadura de mago; recarga de la varita">Descanso largo</button>
           </div>
         </div>
         <p class="muted">Los PG, espacios de conjuro y usos de rasgos se mantienen entre combates hasta un descanso.</p>
+        ${renderDescanso(est)}
         <div class="lista">
           ${PJS.map((pj) => renderPj(pj, est)).join("")}
         </div>
       </div>`;
+  }
+
+  // ---------- Descansos ----------
+  // descanso: null | { tipo: "corto", valores: {pjId: dado}, mensajes: [] } | { tipo: "varita", valor }
+  let descanso = null;
+
+  function varitaPorRecargar(est) {
+    return (est.botin || []).find((it) => {
+      const o = Objetos.objetoDe(it);
+      return o && o.cargas != null && it.cargas < o.cargas;
+    });
+  }
+
+  function renderDescanso(est) {
+    if (!descanso) return "";
+    if (descanso.tipo === "varita") {
+      const it = varitaPorRecargar(est);
+      if (!it) return "";
+      const o = Objetos.objetoDe(it);
+      return `
+        <div class="panel-descanso">
+          <div class="paso-titulo">🌅 Amanecer: <b>${esc(o.nombre)}</b> recupera ${esc(o.recarga)} (ahora ${it.cargas}/${o.cargas})</div>
+          <div class="fila">
+            <span class="sub">Tira 1d3</span>
+            ${Dados.casillero({ key: "varita", caras: 3, valor: descanso.valor })}
+            <span style="flex:1"></span>
+            <button class="btn btn-sm" data-accion="omitir-varita">Omitir</button>
+            <button class="btn btn-sm btn-primary" data-accion="recargar-varita">Recargar</button>
+          </div>
+        </div>`;
+    }
+
+    const filas = PJS.filter((pj) => !(est.muertos && est.muertos[pj.id])).map((pj) => {
+      const pg = Recursos.vida(est, pj);
+      const quedan = Recursos.dadosGolpeRestantes(est, pj);
+      const con = R.mod(pj.atributos.CON);
+      const caras = R.carasDe(pj.dadoGolpe)[0];
+      let dado;
+      if (!quedan) dado = `<span class="sub">Sin dados de golpe (vuelven con descanso largo)</span>`;
+      else if (pg >= pj.pgMax) dado = `<span class="sub">PG al máximo · ${quedan}/${Recursos.dadosGolpeTotales(pj)} dados de golpe</span>`;
+      else {
+        dado = `<span class="sub">Dado de golpe ${esc(pj.dadoGolpe)} ${R.signo(con)} CON</span>
+          ${Dados.casillero({ key: "hd|" + pj.id, caras, valor: descanso.valores[pj.id] })}
+          <span class="sub" data-prev="${esc(pj.id)}">${previaDadoGolpe(pj, descanso.valores[pj.id])}</span>
+          <button class="btn btn-sm" data-accion="dado-golpe" data-pj="${esc(pj.id)}">Curar</button>
+          <span class="sub">quedan ${quedan}</span>`;
+      }
+      let arcana = "";
+      if (pj.recuperacionArcana) {
+        const ok = Recursos.recuperacionArcanaDisponible(est, pj);
+        const usada = (est.recursos && est.recursos[pj.id] && est.recursos[pj.id].usos.recuperacion_arcana);
+        arcana = `<button class="btn btn-sm" data-accion="recuperacion-arcana" data-pj="${esc(pj.id)}" ${ok ? "" : "disabled"}
+          title="Recupera 1 espacio de conjuro de nivel 1 (una vez por descanso largo)">📖 Recuperación arcana${usada ? " (ya usada)" : ok ? "" : " (sin espacios gastados)"}</button>`;
+      }
+      return `<div class="fila-descanso">
+        <span class="nombre">${esc(pj.nombre)}</span>
+        <span class="chip ${pg < pj.pgMax ? "chip-herido" : ""}">PG <b>${pg}/${pj.pgMax}</b></span>
+        <div class="fila-descanso-acciones">${dado}${arcana}</div>
+      </div>`;
+    }).join("");
+
+    return `
+      <div class="panel-descanso">
+        <div class="paso-titulo">☕ <b>Descanso corto</b> (1 hora): cada PJ puede gastar dados de golpe para curarse. Tira el dado físico y escribe el resultado.</div>
+        <div class="lista">${filas}</div>
+        ${descanso.mensajes.length ? `<ul class="rasgos">${descanso.mensajes.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}
+        <div class="barra-acciones">
+          <span class="sub">Al terminar: Sundar recupera 1 uso de Tomar aliento.</span>
+          <button class="btn btn-sm btn-primary" data-accion="terminar-corto">Terminar descanso corto</button>
+        </div>
+      </div>`;
+  }
+
+  function previaDadoGolpe(pj, valor) {
+    if (valor == null) return "";
+    return `= +${Math.max(1, valor + R.mod(pj.atributos.CON))} PG`;
+  }
+
+  // Escribir en un casillero del descanso no redibuja (así no se pierde el foco)
+  function alEscribirDescanso(e) {
+    const input = e.target;
+    if (!input.matches("[data-dado]") || !descanso) return;
+    const valor = Dados.leer(input.value, Number(input.dataset.caras));
+    input.classList.toggle("invalido", valor === undefined);
+    const v = valor === undefined ? null : valor;
+    if (input.dataset.key === "varita") {
+      descanso.valor = v;
+      return;
+    }
+    const pjId = input.dataset.key.split("|")[1];
+    descanso.valores[pjId] = v;
+    const prev = raiz.querySelector(`[data-prev="${pjId}"]`);
+    if (prev) prev.textContent = previaDadoGolpe(porId(PJS, pjId), v);
+  }
+
+  function hayCombate() {
+    if (!Estado.get().combate) return false;
+    Dialogo.aviso("Termina el combate antes de descansar (pestaña Combate → Terminar combate).", "Hay un combate en curso");
+    return true;
   }
 
   function renderPj(pj, est) {
@@ -131,9 +233,9 @@ window.Preparar = (function () {
           <span class="sub">${esc(pj.clase)} ${pj.nivel} · ${esc(pj.especie.split(" (")[0])}</span>
         </label>
         <div class="chips">
-          <span class="chip" title="Clase de armadura">CA <b>${pj.ca}</b></span>
+          <span class="chip" title="Clase de armadura${pj.escudo ? (Objetos.equipoDe(est, pj).escudo ? " (con escudo)" : " (sin escudo)") : ""}">CA <b>${pj.ca - (pj.escudo && !Objetos.equipoDe(est, pj).escudo ? pj.escudo : 0)}</b></span>
           <span class="chip ${Recursos.vida(est, pj) < pj.pgMax ? "chip-herido" : ""}" title="Puntos de golpe actuales / máximos">PG <b>${Recursos.vida(est, pj)}/${pj.pgMax}</b></span>
-          ${Recursos.espaciosTotales(pj, 1) ? `<span class="chip" title="Espacios de conjuro de nivel 1">Espacios <b class="espacios">${"●".repeat(Recursos.espaciosLibres(est, pj, 1))}${"○".repeat(Recursos.espaciosTotales(pj, 1) - Recursos.espaciosLibres(est, pj, 1))}</b></span>` : ""}
+          ${Recursos.espaciosTotales(pj, 1) ? `<span class="chip chip-espacios" title="Espacios de conjuro de nivel 1">✨ <span class="gemas">${'<i class="gema llena"></i>'.repeat(Recursos.espaciosLibres(est, pj, 1))}${'<i class="gema"></i>'.repeat(Recursos.espaciosTotales(pj, 1) - Recursos.espaciosLibres(est, pj, 1))}</span></span>` : ""}
           <span class="chip" title="Iniciativa">Ini <b>${R.signo(R.iniciativa(pj))}</b></span>
           <span class="chip" title="Velocidad">${pj.velocidad} ft</span>
         </div>
@@ -163,7 +265,7 @@ window.Preparar = (function () {
   function renderFichaPj(pj, est) {
     const armas = pj.armas.map((id) => porId(ARMAS, id)).filter(Boolean);
     const trucos = (pj.trucos || []).map((id) => porId(HECHIZOS, id)).filter(Boolean);
-    const idsPreparados = est.preparados[pj.id] || [];
+    const idsPreparados = Recursos.preparadosDe(est, pj.id);
     const preparados = idsPreparados.map((id) => porId(HECHIZOS, id)).filter(Boolean);
     const disponibles = hechizosPreparables(pj).filter((h) => !idsPreparados.includes(h.id));
     const lleno = pj.maxPreparados != null && idsPreparados.length >= pj.maxPreparados;
@@ -174,15 +276,21 @@ window.Preparar = (function () {
       <div class="ficha">
         ${renderAtributos(pj, R.salvacion, pj.salvacionesCompetentes || [])}
 
-        <h4>Armas</h4>
+        <h4>Armas <span class="sub equipo-ayuda">marca las que lleva en la mano al empezar el combate (máx. 2 manos: ${Objetos.manosUsadas(est, pj)}/2 usadas)</span></h4>
         <table class="tabla">
-          <thead><tr><th>Arma</th><th>Ataque</th><th>Daño</th><th>Alcance</th><th>Maestría</th></tr></thead>
+          <thead><tr><th>En mano</th><th>Arma</th><th>Ataque</th><th>Daño</th><th>Alcance</th><th>Maestría</th></tr></thead>
           <tbody>
-            ${armas.map((a) => {
+            ${pj.escudo ? `<tr class="${Objetos.equipoDe(est, pj).escudo ? "en-mano" : ""}">
+              <td><input type="checkbox" data-accion="equipo-escudo" data-pj="${esc(pj.id)}" ${Objetos.equipoDe(est, pj).escudo ? "checked" : ""} aria-label="Escudo en la mano"></td>
+              <td>🛡 Escudo<div class="sub">1 mano · +${pj.escudo} CA (CA ${pj.ca} con escudo, ${pj.ca - pj.escudo} sin él) · ponérselo o quitárselo en combate gasta la Acción</div></td>
+              <td colspan="4"></td></tr>` : ""}
+            ${Objetos.armasDe(pj, est).map(({ key, arma: a, item }) => {
               const at = R.ataqueArma(pj, a);
               const usaMaestria = (pj.maestrias || []).includes(a.id);
-              return `<tr>
-                <td>${esc(a.nombre)}<div class="sub">${esc(a.propiedades.join(", "))}</div></td>
+              const enMano = Objetos.equipoDe(est, pj).enMano.includes(key);
+              return `<tr class="${enMano ? "en-mano" : ""}">
+                <td><input type="checkbox" data-accion="equipo-arma" data-pj="${esc(pj.id)}" data-key="${esc(key)}" ${enMano ? "checked" : ""} aria-label="${esc(a.nombre)} en la mano"></td>
+                <td>${item ? "✨ " : ""}${esc(a.nombre)}<div class="sub">${Objetos.manosArma(a) === 2 ? "2 manos · " : "1 mano · "}${esc(a.propiedades.join(", "))}${item ? " · del botín" : ""}</div></td>
                 <td><b>${R.signo(at.bonus)}</b></td>
                 <td>${esc(at.textoDano)} <span class="sub">${esc(a.tipoDano)}</span>
                   ${a.versatil ? `<div class="sub">${esc(a.versatil)} a dos manos</div>` : ""}</td>
@@ -342,6 +450,22 @@ window.Preparar = (function () {
 
   // ---------- Acciones ----------
   function alCambiar(e) {
+    const { accion } = e.target.dataset;
+    if (accion === "equipo-arma" || accion === "equipo-escudo") {
+      const pj = porId(PJS, e.target.dataset.pj);
+      let resultado = { ok: true, guardadas: [] };
+      Estado.actualizar((est) => {
+        if (accion === "equipo-escudo") resultado = Objetos.ponerEscudo(est, pj, e.target.checked);
+        else if (e.target.checked) resultado = Objetos.equipar(est, pj, e.target.dataset.key);
+        else Objetos.guardarArma(est, pj, e.target.dataset.key);
+      });
+      render();
+      if (!resultado.ok && resultado.error) Dialogo.aviso(resultado.error, "No cabe en las manos");
+      else if (resultado.guardadas && resultado.guardadas.length) {
+        Dialogo.aviso(`Para tener las manos libres se ha guardado: ${resultado.guardadas.join(", ")}.`, "Equipo actualizado");
+      }
+      return;
+    }
     if (e.target.dataset.accion === "importar") {
       const archivo = e.target.files && e.target.files[0];
       e.target.value = "";
@@ -399,24 +523,68 @@ window.Preparar = (function () {
       const pjId = btn.dataset.pj;
       const hechizoId = raiz.querySelector(`[data-ref="hechizo-${pjId}"]`).value;
       Estado.actualizar((est) => {
-        est.preparados[pjId] = [...(est.preparados[pjId] || []), hechizoId];
+        est.preparados[pjId] = [...Recursos.preparadosDe(est, pjId), hechizoId];
       });
     } else if (accion === "quitar-hechizo") {
       Estado.actualizar((est) => {
-        est.preparados[btn.dataset.pj] = (est.preparados[btn.dataset.pj] || []).filter((h) => h !== id);
+        est.preparados[btn.dataset.pj] = Recursos.preparadosDe(est, btn.dataset.pj).filter((h) => h !== id);
       });
     } else if (accion === "exportar") {
       exportar();
       return;
     } else if (accion === "reiniciar-todo") {
-      if (!confirm("¿Borrar TODO? PG, inventarios, botín, muertes y el combate en curso volverán al estado inicial. (Exporta antes si quieres una copia.)")) return;
-      Estado.reiniciar();
-      Combate.render();
+      Dialogo.confirmar("PG, inventarios, botín, muertes y el combate en curso volverán al estado inicial. Exporta antes si quieres una copia.",
+        { titulo: "¿Borrar todo?", aceptar: "Borrar todo", peligro: true })
+        .then((ok) => {
+          if (!ok) return;
+          Estado.reiniciar();
+          Combate.render();
+          render();
+        });
+      return;
     } else if (accion === "descanso-corto") {
+      if (hayCombate()) return;
+      descanso = { tipo: "corto", valores: {}, mensajes: [] };
+    } else if (accion === "dado-golpe") {
+      const pj = porId(PJS, btn.dataset.pj);
+      const valor = descanso.valores[pj.id];
+      if (valor == null) return;
+      Estado.actualizar((est) => {
+        const antes = Recursos.vida(est, pj);
+        const cura = Math.max(1, valor + R.mod(pj.atributos.CON));
+        Recursos.guardarVida(est, pj.id, Math.min(pj.pgMax, antes + cura));
+        Recursos.gastarDadoGolpe(est, pj);
+        descanso.mensajes.push(`${pj.nombre} gasta un dado de golpe (${pj.dadoGolpe}: ${valor} ${R.signo(R.mod(pj.atributos.CON))}) → +${Recursos.vida(est, pj) - antes} PG (${Recursos.vida(est, pj)}/${pj.pgMax})`);
+      });
+      delete descanso.valores[pj.id];
+    } else if (accion === "recuperacion-arcana") {
+      const pj = porId(PJS, btn.dataset.pj);
+      Estado.actualizar((est) => Recursos.usarRecuperacionArcana(est, pj));
+      descanso.mensajes.push(`${pj.nombre} usa Recuperación arcana: recupera 1 espacio de nivel 1`);
+    } else if (accion === "terminar-corto") {
       Estado.actualizar((est) => Recursos.descansoCorto(est));
+      descanso = null;
     } else if (accion === "descanso-largo") {
-      if (!confirm("¿Descanso largo? Todos los PJs recuperan PG, espacios de conjuro y rasgos.")) return;
-      Estado.actualizar((est) => Recursos.descansoLargo(est));
+      if (hayCombate()) return;
+      Dialogo.confirmar("Todos los PJs recuperan PG, dados de golpe, espacios de conjuro y rasgos.",
+        { titulo: "¿Descanso largo?", aceptar: "Descansar" })
+        .then((ok) => {
+          if (!ok) return;
+          Estado.actualizar((est) => Recursos.descansoLargo(est));
+          descanso = varitaPorRecargar(Estado.get()) ? { tipo: "varita", valor: null } : null;
+          render();
+        });
+      return;
+    } else if (accion === "recargar-varita") {
+      if (descanso.valor == null) return;
+      Estado.actualizar((est) => {
+        const it = varitaPorRecargar(est);
+        const o = Objetos.objetoDe(it);
+        it.cargas = Math.min(o.cargas, it.cargas + descanso.valor);
+      });
+      descanso = null;
+    } else if (accion === "omitir-varita") {
+      descanso = null;
     } else if (accion === "iniciar") {
       iniciarCombate();
       return;
@@ -427,8 +595,12 @@ window.Preparar = (function () {
   }
 
   // Crea las instancias del combate (enemigos numerados con PG propios).
-  function iniciarCombate() {
-    if (Estado.get().combate && !confirm("Ya hay un combate en curso. ¿Reemplazarlo por uno nuevo?")) return;
+  async function iniciarCombate() {
+    if (Estado.get().combate) {
+      const ok = await Dialogo.confirmar("Ya hay un combate en curso. Si empiezas otro, se perderá.",
+        { titulo: "¿Reemplazar el combate?", aceptar: "Empezar uno nuevo", peligro: true });
+      if (!ok) return;
+    }
     Estado.actualizar((est) => {
       const participantes = [];
       est.pjsActivos.forEach((id) => {
@@ -464,6 +636,7 @@ window.Preparar = (function () {
     raiz = document.getElementById("panel-preparar");
     raiz.addEventListener("change", alCambiar);
     raiz.addEventListener("click", alClic);
+    raiz.addEventListener("input", alEscribirDescanso);
     render();
   }
 

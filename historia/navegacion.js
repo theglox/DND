@@ -11,7 +11,7 @@
   const usados = new Set();
   const secciones = [...document.querySelectorAll("h1, h2, h3")].map((h) => {
     const texto = h.textContent.replace(/\s+/g, " ").trim();
-    const codigo = (texto.match(/^([DS]\d+)\s*:/i) || [])[1];
+    const codigo = (texto.match(/^([A-Z]\d+)\s*:/) || [])[1];   // D1, S3, T7…
     let id = h.id || (codigo ? codigo.toLowerCase() : h.tagName === "H1" ? "portada" : slug(texto));
     while (usados.has(id)) id += "-2";
     usados.add(id);
@@ -40,7 +40,9 @@
 
   // ---------- Mensajes con la app ----------
   function enviar(tipo, datos) {
-    if (window.parent !== window) window.parent.postMessage({ fuente: "historia", tipo, ...datos }, "*");
+    // "pagina" permite a la app ignorar mensajes de un libro que ya no está abierto
+    const pagina = decodeURIComponent(location.pathname.split("/").pop());
+    if (window.parent !== window) window.parent.postMessage({ fuente: "historia", tipo, pagina, ...datos }, "*");
   }
 
   function ir(id, suave) {
@@ -54,10 +56,18 @@
     el.classList.add("salto-destacado");
   }
 
+  // Un salto antes de terminar la carga se pierde (el navegador recoloca el scroll al acabar)
+  function cuandoCargada(fn) {
+    if (document.readyState === "complete") fn();
+    else window.addEventListener("load", () => setTimeout(fn, 0), { once: true });
+  }
+  // La app decide dónde se queda la historia: que el navegador no restaure el scroll anterior
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
   window.addEventListener("message", (e) => {
     const d = e.data;
     if (!d || d.fuente !== "app") return;
-    if (d.tipo === "ir") ir(d.id, d.suave);
+    if (d.tipo === "ir") cuandoCargada(() => ir(d.id, d.suave));
     if (d.tipo === "pedir") enviar("secciones", { secciones });
   });
 
@@ -77,10 +87,12 @@
     }
   }
   window.addEventListener("scroll", () => {
-    if (!pendiente) { pendiente = true; requestAnimationFrame(detectar); }
+    if (!pendiente) { pendiente = true; setTimeout(detectar, 60); }
   }, { passive: true });
 
   enviar("secciones", { secciones });
-  if (location.hash) ir(location.hash.slice(1), false);
-  detectar();
+  cuandoCargada(() => {
+    if (location.hash) ir(decodeURIComponent(location.hash.slice(1)), false);
+    detectar();
+  });
 })();

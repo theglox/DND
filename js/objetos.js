@@ -66,6 +66,82 @@ window.Objetos = (function () {
     return [...magicas, ...propias];
   }
 
+  // ---------- Equipo en la mano (máx. 2 manos: armas + escudo) ----------
+  // est.equipo[pjId] = { enMano: [claves de armasDe], escudo: bool }. Persiste entre combates.
+  function manosArma(arma, dosManos = false) {
+    return (arma.propiedades || []).includes("a dos manos") || dosManos ? 2 : 1;
+  }
+
+  function equipoDe(est, pj) {
+    est.equipo = est.equipo || {};
+    if (!est.equipo[pj.id]) {
+      const ini = pj.equipoInicial || {};
+      est.equipo[pj.id] = {
+        enMano: ini.enMano ? [...ini.enMano] : (pj.armas[0] ? ["arma:" + pj.armas[0]] : []),
+        escudo: Boolean(pj.escudo) && ini.escudo !== false
+      };
+    }
+    const eq = est.equipo[pj.id];
+    // Si un arma del botín cambió de manos, ya no puede estar en la mano de este PJ
+    const claves = new Set(armasDe(pj, est).map((a) => a.key));
+    eq.enMano = eq.enMano.filter((k) => claves.has(k));
+    return eq;
+  }
+
+  function manosUsadas(est, pj, excluirKey) {
+    const eq = equipoDe(est, pj);
+    let n = eq.escudo ? 1 : 0;
+    armasDe(pj, est).forEach((a) => {
+      if (eq.enMano.includes(a.key) && a.key !== excluirKey) n += manosArma(a.arma);
+    });
+    return n;
+  }
+
+  function armasEnMano(pj, est) {
+    const eq = equipoDe(est, pj);
+    return armasDe(pj, est).filter((a) => eq.enMano.includes(a.key));
+  }
+
+  function armasGuardadas(pj, est) {
+    const eq = equipoDe(est, pj);
+    return armasDe(pj, est).filter((a) => !eq.enMano.includes(a.key));
+  }
+
+  // Saca un arma: guarda las que haga falta para liberar manos. { ok, guardadas: [nombres], error }
+  function equipar(est, pj, key) {
+    const eq = equipoDe(est, pj);
+    const a = armasDe(pj, est).find((x) => x.key === key);
+    if (!a || eq.enMano.includes(key)) return { ok: false, guardadas: [] };
+    const necesita = manosArma(a.arma);
+    if (eq.escudo && necesita === 2) {
+      return { ok: false, guardadas: [], error: `${a.arma.nombre} se usa a dos manos: primero quítate el escudo.` };
+    }
+    const guardadas = [];
+    while (2 - manosUsadas(est, pj) < necesita && eq.enMano.length) {
+      const fuera = eq.enMano.shift();
+      const f = armasDe(pj, est).find((x) => x.key === fuera);
+      guardadas.push(f ? f.arma.nombre : fuera);
+    }
+    eq.enMano.push(key);
+    return { ok: true, guardadas };
+  }
+
+  function guardarArma(est, pj, key) {
+    const eq = equipoDe(est, pj);
+    eq.enMano = eq.enMano.filter((k) => k !== key);
+  }
+
+  // Ponerse / quitarse el escudo. { ok, error }
+  function ponerEscudo(est, pj, puesto) {
+    const eq = equipoDe(est, pj);
+    if (!pj.escudo) return { ok: false, error: `${pj.nombre} no tiene escudo.` };
+    if (puesto && !eq.escudo && manosUsadas(est, pj) >= 2) {
+      return { ok: false, error: "Tienes las dos manos ocupadas: guarda un arma antes de ponerte el escudo." };
+    }
+    eq.escudo = puesto;
+    return { ok: true };
+  }
+
   function pocionesDe(pj, est) {
     return delPortador(est, pj.id).filter((it) => (objetoDe(it) || {}).tipo === "pocion");
   }
@@ -315,6 +391,7 @@ window.Objetos = (function () {
 
   return {
     init, render, asegurarBotin, armasDe, pocionesDe, objetoDe,
-    inventarioDe, cantidadDe, gastarObjeto, municionDe, usablesDe
+    inventarioDe, cantidadDe, gastarObjeto, municionDe, usablesDe,
+    equipoDe, manosArma, manosUsadas, armasEnMano, armasGuardadas, equipar, guardarArma, ponerEscudo
   };
 })();
