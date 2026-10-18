@@ -33,7 +33,8 @@ window.Acciones = (function () {
   // ---------- Utilidades ----------
   const participante = (c, uid) => c.participantes.find((p) => p.uid === uid);
   const datosDe = (p) => porId(p.tipo === "pj" ? PJS : ENEMIGOS, p.refId);
-  const fuera = (p) => (p.tipo === "enemigo" && p.pg <= 0) || Boolean(p.muerto);
+  // enHumo: a 0 PG pero se reforma en su turno (No muerto implacable): sigue en la iniciativa
+  const fuera = (p) => (p.tipo === "enemigo" && p.pg <= 0 && !p.enHumo) || Boolean(p.muerto);
   const suerteDe = (p) => p.tipo === "pj" && Boolean(datosDe(p).suerteMediano);
   const hechizo = (id) => porId(HECHIZOS, id);
 
@@ -60,6 +61,18 @@ window.Acciones = (function () {
     return null;
   }
 
+  // Defensas contra un ataque concreto: además, la Canción de sangre da resistencia a daño
+  // contundente, cortante y perforante de armas no mágicas a los aliados de Lucian
+  const FISICOS = ["contundente", "cortante", "perforante"];
+  function defensasAtaque(c, ac, desc, obj) {
+    const def = defensasDe(obj);
+    const armaNoMagica = desc && desc.atk && desc.atk.pj && !desc.atk.arma.magico;
+    if (armaNoMagica && bajoCancion(c, obj) && ac.opciones.cancion !== false) {
+      def.resistencias = [...new Set([...def.resistencias, ...FISICOS])];
+    }
+    return def;
+  }
+
   // Defensas de la ficha + resistencias de buffs (p. ej. Poción de resistencia)
   function defensasDe(p) {
     const d = datosDe(p);
@@ -77,7 +90,7 @@ window.Acciones = (function () {
 
   // Candidatos a objetivo: primero los del bando contrario.
   function candidatos(c, actor) {
-    const vivos = c.orden.map((u) => participante(c, u)).filter((q) => q && !fuera(q) && q.uid !== actor.uid);
+    const vivos = c.orden.map((u) => participante(c, u)).filter((q) => q && !fuera(q) && !q.enHumo && q.uid !== actor.uid);
     return [...vivos.filter((q) => q.tipo !== actor.tipo), ...vivos.filter((q) => q.tipo === actor.tipo)];
   }
 
@@ -319,7 +332,15 @@ window.Acciones = (function () {
     syncVida(p);
     let nota = "";
     if (p.tipo === "enemigo") {
-      nota = p.pg === 0 && antes > 0 ? " · ¡derrotado!" : "";
+      const d = datosDe(p);
+      if (p.pg === 0 && antes > 0 && d.noMuertoImplacable && !p.implacableUsado) {
+        // No muerto implacable: se disuelve en humo y se reforma con 1 PG al inicio de su turno
+        p.implacableUsado = true;
+        p.enHumo = true;
+        nota = " · ¡se disuelve en humo carmesí! Se reformará con 1 PG al inicio de su turno (No muerto implacable)";
+      } else {
+        nota = p.pg === 0 && antes > 0 ? (d.escapaAlCaer ? ` · ${d.escapaAlCaer}` : " · ¡derrotado!") : "";
+      }
     } else if (antes > 0 && p.pg === 0) {
       if (cantidad - antes >= p.pgMax) {
         morir(p);
@@ -744,7 +765,10 @@ window.Acciones = (function () {
     if (a.extraConVentaja && ac.tiradas.atk.modo === "ventaja") {
       grupos.push({ id: "ventaja", etiqueta: "por ventaja", tipo: a.extraConVentaja.tipo, caras: R.carasDe(a.extraConVentaja.dado), fijo: 0 });
     }
-    return { atk, nombre: a.nombre, bonus: a.bonusAtaque, grupos, accion: a, competente: true, cuerpo: a.tipo !== "distancia" };
+    // Canción de sangre: +2 al ataque y +1d6 necrótico a los aliados de Lucian a 30 ft
+    const cancion = bajoCancion(c, actor) && ac.opciones.cancion !== false;
+    if (cancion) grupos.push({ id: "cancion", etiqueta: "Canción de sangre", tipo: "necrótico", caras: [6], fijo: 0 });
+    return { atk, nombre: a.nombre, bonus: a.bonusAtaque + (cancion ? 2 : 0), grupos, accion: a, competente: true, cuerpo: a.tipo !== "distancia" };
   }
 
   const tieneBuff = (p, id) => (p.buffs || []).some((b) => b.id === id);
@@ -843,13 +867,38 @@ window.Acciones = (function () {
     const a = datosDe(p).acciones[idx];
     if (a.recarga && c.recargas && c.recargas[p.uid] && c.recargas[p.uid][idx] === false) return false;
     if (a.usosPorDia && ((c.usos && c.usos[p.uid] && c.usos[p.uid][idx]) || 0) >= a.usosPorDia) return false;
+    if (a.nivelConjuro && espaciosEnemigoLibres(c, p, a.nivelConjuro) === 0) return false;
     return true;
+  }
+
+  // Espacios de conjuro de un enemigo lanzador (enemigo.espaciosConjuro = { 1: 4, 2: 3… })
+  function espaciosEnemigoLibres(c, p, nivel) {
+    const total = (datosDe(p).espaciosConjuro || {})[nivel] || 0;
+    const usados = ((c.espaciosEnemigo || {})[p.uid] || {})[nivel] || 0;
+    return Math.max(0, total - usados);
   }
 
   function gastarAccion(c, p, idx) {
     const a = datosDe(p).acciones[idx];
     if (a.recarga) { c.recargas = c.recargas || {}; (c.recargas[p.uid] = c.recargas[p.uid] || {})[idx] = false; }
     if (a.usosPorDia) { c.usos = c.usos || {}; const u = (c.usos[p.uid] = c.usos[p.uid] || {}); u[idx] = (u[idx] || 0) + 1; }
+    if (a.nivelConjuro) {
+      c.espaciosEnemigo = c.espaciosEnemigo || {};
+      const e = (c.espaciosEnemigo[p.uid] = c.espaciosEnemigo[p.uid] || {});
+      e[a.nivelConjuro] = (e[a.nivelConjuro] || 0) + 1;
+    }
+  }
+
+  // ---------- Canción de sangre (aura de Lucian) ----------
+  // Fuente activa: consciente, no incapacitada y capaz de cantar (no Ensordecida… ni en humo)
+  function fuenteCancion(c, excluirUid) {
+    return c.participantes.find((q) => q.uid !== excluirUid && datosDe(q).auraCancion && !fuera(q) && !q.enHumo && q.pg > 0 &&
+      !INCAPACITANTES.some((x) => tiene(q, x)));
+  }
+
+  // Un enemigo aliado de la fuente (no ella misma) puede beneficiarse
+  function bajoCancion(c, p) {
+    return p && p.tipo === "enemigo" && Boolean(fuenteCancion(c, p.uid));
   }
 
   // CD de objetos arrojados (aceite, agua bendita): 8 + DES + competencia
@@ -929,6 +978,11 @@ window.Acciones = (function () {
     const p = participante(c, c.turnoUid);
     if (!p) return;
     p.reaccionUsada = false;
+    if (p.enHumo) {
+      p.enHumo = false;
+      p.pg = 1;
+      log(c, `${p.nombre} se reforma del humo carmesí con 1 PG (No muerto implacable)`);
+    }
     if (tieneBuff(p, "escudo")) {
       p.buffs = p.buffs.filter((b) => b.id !== "escudo");
       log(c, `Termina Escudo de ${p.nombre} → CA ${caDe(p)}`);
@@ -1066,9 +1120,12 @@ window.Acciones = (function () {
       d.acciones.forEach((a, i) => {
         if (a.cd == null) return;
         const ok = disponible(c, p, i);
-        const costo = costoSimple(c, "accion");
-        const etiqueta = a.recarga ? ` · recarga ${a.recarga}` : a.usosPorDia ? ` · ${a.usosPorDia}/día` : "";
-        otras.push(boton("ac-salvacion", `data-idx="${i}"`, "✦", a.nombre, `${a.salvacion} CD ${a.cd}${etiqueta}${ok ? "" : " · no disponible"}${costo ? "" : " · acción ya usada"}`, !ok || !costo, costo));
+        const tipo = a.adicional ? "adicional" : "accion";
+        const costo = costoSimple(c, tipo);
+        const etiqueta = a.recarga ? ` · recarga ${a.recarga}` : a.usosPorDia ? ` · ${a.usosPorDia}/día` :
+          a.nivelConjuro ? ` · conjuro nv${a.nivelConjuro} (${espaciosEnemigoLibres(c, p, a.nivelConjuro)} espacios)` : "";
+        (a.adicional ? adicionales : otras).push(boton("ac-salvacion", `data-idx="${i}"`, "✦", a.nombre,
+          `${a.salvacion} CD ${a.cd}${a.dano ? ` · ${a.dano} ${a.tipoDano}` : ""}${etiqueta}${ok ? "" : " · no disponible"}${costo ? "" : ` · ${a.adicional ? "acción adicional" : "acción"} ya usada`}`, !ok || !costo, costo));
       });
     } else {
       hechizosDe(est, d).forEach((h) => {
@@ -1464,6 +1521,12 @@ window.Acciones = (function () {
     if (tiene(actor, "Hechizado") && hechizador === obj.uid) op.push(`<span class="sub aviso-texto">Hechizado: no puede atacar a quien le hechizó.</span>`);
     const indefenso = desc.cuerpo && ["Paralizado", "Inconsciente"].find((x) => tiene(obj, x));
     if (indefenso) op.push(check("a5ft", ac.opciones.a5ft !== false, `A 5 ft de un objetivo ${indefenso}: si impacta, es crítico automático`));
+    const cantor = fuenteCancion(c, actor.tipo === "enemigo" ? actor.uid : obj.uid);
+    if (actor.tipo === "enemigo" && bajoCancion(c, actor)) {
+      op.push(check("cancion", ac.opciones.cancion !== false, `🩸 Canción de sangre de ${esc(cantor.nombre)} (si está a 30 ft): +2 al ataque y +1d6 necrótico`));
+    } else if (actor.tipo === "pj" && bajoCancion(c, obj) && desc.atk && desc.atk.pj && !desc.atk.arma.magico) {
+      op.push(check("cancion", ac.opciones.cancion !== false, `🩸 ${esc(obj.nombre)} bajo la Canción de sangre de ${esc(cantor.nombre)} (a 30 ft): resiste daño contundente, cortante y perforante de armas no mágicas`));
+    }
     const bEscudo = bloqueoEscudo(est, obj);
     if (bEscudo !== "no" && bEscudo !== "ya activo") {
       op.push(check("escudo", ac.opciones.escudo && !bEscudo,
@@ -1489,7 +1552,7 @@ window.Acciones = (function () {
     let danoHtml = "";
     let listo = false;
     if (r && r.golpe) {
-      const res2 = calcularDano(desc.grupos, ac.valores, r.critico, defensasDe(obj), ac.opciones.salvaje);
+      const res2 = calcularDano(desc.grupos, ac.valores, r.critico, defensasAtaque(c, ac, desc, obj), ac.opciones.salvaje);
       listo = Boolean(res2);
       danoHtml = `
         <div class="paso">
@@ -2012,7 +2075,8 @@ window.Acciones = (function () {
       }
       case "ac-salvacion": {
         const primero = candidatos(c, actor)[0];
-        c.accion = nuevaAccion("salvacion", actor, { idx: Number(ds.idx), objetivos: [], costo: "accion" });
+        const def = datosDe(actor).acciones[Number(ds.idx)];
+        c.accion = nuevaAccion("salvacion", actor, { idx: Number(ds.idx), objetivos: [], costo: def && def.adicional ? "adicional" : "accion" });
         if (primero) alternarObjetivo(c, c.accion, primero.uid, true);
         c.ultimo = null;
         break;
@@ -2229,7 +2293,7 @@ window.Acciones = (function () {
     const obj = participante(c, ac.objetivoUid);
     const desc = descriptor(est, c, ac);
     const r = resultadoAtaque(c, ac, desc);
-    const res = calcularDano(desc.grupos, ac.valores, r.critico, defensasDe(obj), ac.opciones.salvaje);
+    const res = calcularDano(desc.grupos, ac.valores, r.critico, defensasAtaque(c, ac, desc, obj), ac.opciones.salvaje);
     if (!res) return;
     aplicarEscudo(est, c, ac);
     romperGorro(c, actor, "ataca");
@@ -2338,7 +2402,7 @@ window.Acciones = (function () {
     const r = resultadoAtaque(c, ac, desc);
     aplicarEscudo(est, c, ac);
     romperGorro(c, actor, "ataca");
-    const { final, nota } = R.aplicarDefensas(desc.modAtributo, desc.atk.arma.tipoDano, defensasDe(obj));
+    const { final, nota } = R.aplicarDefensas(desc.modAtributo, desc.atk.arma.tipoDano, defensasAtaque(c, ac, desc, obj));
     gastarCosto(c, ac, { ataque: true, ligera: esLigera(desc.atk.arma), armaId: desc.atk.arma.id });
     consumirMarcas(c, actor, obj);
     const extra = restarPG(c, obj, final);

@@ -13,6 +13,10 @@ window.DATA_NARRACION = {
   // ================= Libro 2 · Grito de la Cosecha =================
   libro2: {
     flujo: [
+      { etapa: "🎻 Preludio", nodos: [
+        { id: "preludio-portal", texto: "Portal de la Forja" },
+        { id: "preludio-camino", texto: "Lucian en el camino" }
+      ] },
       { etapa: "Inicio", nodos: [
         { id: "comienzo-de-la-aventura", texto: "Goldenwheat marchito" },
         { id: "llegada-a-la-granja-de-la-familia-rillard", texto: "El Viejo Rill" }
@@ -33,7 +37,7 @@ window.DATA_NARRACION = {
       ] },
       { etapa: "El corazón de la plaga", nodos: [
         { id: "t8", texto: "T8 Rilly June" },
-        { id: "t9", texto: "T9 Cripta" }
+        { id: "t9", texto: "T9 Cripta · Lucian" }
       ] },
       { etapa: "Desenlace", nodos: [
         { id: "conclusion", texto: "¿Vuelve Rilly?" },
@@ -42,6 +46,84 @@ window.DATA_NARRACION = {
     ],
 
     secciones: {
+      // ---------- Preludio (añadido por el DM): Lucian Vervain, el Trovador Carmesí ----------
+      "preludio": {
+        escena: "Lucian Vervain, el Trovador Carmesí: el villano recurrente que une las dos aventuras.",
+        narrar: [
+          "Es para ti: Lucian fue el bardo de Gunthar el Glotón. Se volvió no muerto para revivir a su amo y quiere regar el árbol Gulthias con sangre de héroes.",
+          "Aparece tres veces: el portal de la Forja (si venís del libro 1), la emboscada en el camino y la cripta (T9).",
+          "Voz: prosodia perfecta, rimas y metáforas de teatro («acto», «función», «público»). Teatral y sádico, pero nunca suicida."
+        ],
+        bifurcaciones: [
+          { si: "Venís de El Gnomo Evanescente", entonces: "Empieza por el portal de la Forja.", ir: "preludio-portal" },
+          { si: "Empezáis directamente el libro 2", entonces: "Empieza por la emboscada en el camino.", ir: "preludio-camino" }
+        ],
+        consejo: "Regla de oro: Lucian nunca muere en esta aventura. A 0 PG se vuelve humo (la app lo reforma con 1 PG); si vuelve a caer, escapa. Siempre deja una rosa negra y una nota."
+      },
+
+      "preludio-portal": {
+        escena: "Justo después de derrotar al Engendro de Demogorgon en la Forja (S4 del libro 1), Lucian aparece, abre un portal y se burla de Flizzlebin.",
+        guion: [
+          { bloque: "Al caer el Engendro", quien: "Narrador", texto: "El engendro se desploma sobre el yunque y la forja se queda en silencio. Un silencio tan completo que oís vuestra propia respiración… y entonces, un laúd.",
+            acotacion: "Deja que celebren la victoria dos segundos antes de empezar." },
+          { quien: "Narrador", texto: "De las sombras de la forja sale una figura alta con un jubón carmesí y una máscara de porcelana agrietada. Aplaude despacio, con unos guantes negros que no hacen ruido.",
+            acotacion: "Cada paso que da deja una rosa negra marchita en el suelo." },
+          { quien: "Lucian", texto: "¡Bravo! ¡Bravísimo! Qué carnicería tan bien coreografiada. Hacía siglos que no veía un primer acto tan prometedor." },
+          { quien: "Narrador", texto: "Hace un gesto con la mano y el aire se abre detrás de él: una garganta negra, de bordes temblorosos, como una boca que bosteza hacia otro lugar." },
+          { quien: "Lucian", texto: "¿Y el gnomo? ¿Flizzlebin, el que juega a esconderse? Decidle a ese gnomo que su recompensa puede esperar. ¡Gunthar el Glotón está a punto de regresar!",
+            acotacion: "Esta frase, tal cual. Reverencia, y cruza el portal de espaldas." },
+          { bloque: "El portal se cierra", quien: "Narrador", texto: "El portal no se cierra del todo: palpita, encogiéndose poco a poco, como una herida que cicatriza.",
+            acotacion: "Tienen 3 rondas para saltar: DES (Acrobacias) CD 13 en el panel de pruebas." }
+        ],
+        preguntas: [
+          { p: "¿Atacan a Lucian antes de que se vaya?", r: "Esquiva con una pirueta y entra en el portal riendo. No es su momento de pelear." },
+          { p: "¿Quién es Gunthar el Glotón?", r: "Nadie lo sabe aún. Si Flizzlebin está presente, palidece: «Un vampiro… muerto hace mucho. O eso creíamos»." }
+        ],
+        bifurcaciones: [
+          { si: "Saltan al portal (Acrobacias CD 13 en 3 rondas)", entonces: "Aparecen en el camino a Goldenwheat, con Lucian esperándolos.", ir: "preludio-camino" },
+          { si: "Nadie salta o fallan", entonces: "El portal se cierra. Flizzlebin entrega la recompensa y los guía a Goldenwheat.", ir: "preludio-camino" }
+        ],
+        ambiente: "Después del combate, silencio total. El laúd tiene que sonar fuera de lugar.",
+        consejo: "Es una presentación, no un combate: Lucian solo viene a anunciar el libro 2 y a dejarles con ganas de seguirle. Si empezáis directamente el libro 2, cuéntalo como un recuerdo en dos frases."
+      },
+
+      "preludio-camino": {
+        escena: "Antes de ver los campos de Goldenwheat, el Trovador Carmesí les corta el paso: combate teatral de 3 rondas.",
+        guion: [
+          { bloque: "En el camino", quien: "Narrador", texto: "A media tarde, el camino se estrecha entre dos setos secos. Entonces lo oís: un laúd. Una melodía lenta, desafinada a propósito, que parece venir de todas partes y de ninguna.",
+            acotacion: "Baja la voz. Si tienes música de laúd o de violín, ahora." },
+          { quien: "Narrador", texto: "Sobre una roca junto al camino, como si fuera un escenario, hay una figura alta. Jubón carmesí hecho jirones, botas negras, un sombrero con una pluma de cuervo marchita. Su cara es una máscara de porcelana blanca, agrietada; por la grieta asoma una mandíbula sin labios. El laúd que toca está hecho de costillas.",
+            acotacion: "Descríbelo de arriba abajo, como un plano de cine. La mandíbula, lo último." },
+          { quien: "Lucian", texto: "¡Ah, mi público! Llega tarde, pero llega. Damas, caballeros… gnomos ausentes. Bienvenidos al segundo acto.",
+            acotacion: "Reverencia exagerada, quitándose el sombrero. Si alguno saltó por su portal, salúdalo por su nombre." },
+          { quien: "Lucian", texto: "La granja os espera, la cosecha también… pero antes de la función, veamos si sangráis bien.",
+            acotacion: "Toca un acorde estridente. Tirad iniciativa (añade a Lucian en Preparar)." },
+          { bloque: "Durante el combate: un verso por ronda", quien: "Lucian", texto: "¡Qué elenco tan valiente, qué reparto tan pequeño! Un enano, un mediano… y un mago con sueño.",
+            acotacion: "Ronda 1. Adapta los versos a lo que hagan: se burla del que falle." },
+          { quien: "Lucian", texto: "Golpead, golpead, que la música no cesa: el trigo ya está muerto y vosotros sois la presa.",
+            acotacion: "Ronda 2." },
+          { quien: "Lucian", texto: "Se acaba el primer acto, el telón está cayendo… regad bien vuestras tumbas, que el árbol está creciendo.",
+            acotacion: "Ronda 3, justo antes de irse. «El árbol» es la pista: no la expliques." },
+          { bloque: "Final de la ronda 3: la huida", quien: "Narrador", texto: "Lucian hace girar el laúd sobre su cabeza y lo estrella contra el suelo. Una nube de humo carmesí lo envuelve todo, espesa y dulce como pétalos podridos.",
+            acotacion: "Se va pase lo que pase. No hay tirada para impedirlo." },
+          { quien: "Narrador", texto: "Cuando el humo se disipa, no queda nadie. Solo una rosa negra, marchita, clavada en el barro… con una nota atada al tallo." },
+          { quien: "Nota", texto: "Nos veremos bajo tierra, donde las raíces cantan. Con cariño, L. V.",
+            acotacion: "Si puedes, dales la nota escrita en papel. Después, sigue con «Comienzo de la aventura»." }
+        ],
+        preguntas: [
+          { p: "¿Quién es ese bardo?", r: "No se presenta del todo: «Lucian, para los amigos; Trovador, para el público». Si le preguntan por su amo, solo dice: «Un hombre de gran apetito»." },
+          { p: "¿Pueden seguirlo tras el humo?", r: "El humo no deja rastro. Pero la rosa negra está clavada apuntando hacia la granja." },
+          { p: "Le hablan en vez de luchar", r: "Le encanta: responde en verso, se burla y alarga la escena. Pero al final de la ronda 3 se va igual." }
+        ],
+        bifurcaciones: [
+          { si: "Bajan a Lucian a 0 PG", entonces: "Se disuelve en humo carmesí y se reforma con 1 PG al empezar su turno (la app lo hace sola). Luego se ríe y huye." },
+          { si: "Huyen o no quieren pelear", entonces: "No los persigue: toca, se ríe y les canta desde lejos. Deja la rosa en el camino." },
+          { si: "Termina la ronda 3 (o Lucian escapa antes)", entonces: "Siguen camino y coronan la colina de Goldenwheat.", ir: "comienzo-de-la-aventura" }
+        ],
+        ambiente: "Tarde, setos secos, sin viento. El laúd es lo único que suena.",
+        consejo: "Lucian no viene a ganar, viene a presentarse: que sea un espectáculo y que se vaya en la ronda 3 pase lo que pase."
+      },
+
       "trasfondo-de-la-aventura": {
         escena: "Lo que los jugadores no saben (todavía).",
         narrar: [
@@ -330,23 +412,41 @@ window.DATA_NARRACION = {
       },
 
       "t9": {
-        escena: "La cripta de Gunthar: el árbol Gulthias sale del ataúd y tres demoperros sin ojos lo guardan.",
+        escena: "La cripta de Gunthar: el árbol Gulthias sale del ataúd, tres demoperros sin ojos lo guardan… y Lucian los espera sentado en una rama.",
         guion: [
           { quien: "Narrador", texto: "La cripta es alta y fría. En el centro, un árbol de corteza negra se retuerce contra el techo. Su tronco nace de la tapa astillada de un ataúd, enjaulado en raíces anudadas.",
             acotacion: "Primero el árbol. Luego el ataúd. Los perros, al final." },
           { quien: "Narrador", texto: "Tres perros dan vueltas a su alrededor. No tienen ojos. Cuando levantan la cabeza hacia vosotros, sus hocicos se abren… y se siguen abriendo. Demasiado." },
           { quien: "Narrador", texto: "Tres perros. Como en el cuento del Viejo Rill.",
             acotacion: "Solo si ningún jugador lo dice antes. Si alguien lo dice, mejor." },
+          { bloque: "🎻 Lucian en el árbol", quien: "Narrador", texto: "Entonces, desde arriba, una nota de laúd. Sentado en la rama más alta, con las piernas cruzadas como en un palco, el Trovador Carmesí afina sus cuerdas de tripa. Una rosa negra cae girando hasta vuestros pies.",
+            acotacion: "Si ya lo conocen del camino, deja que lo reconozcan solos." },
+          { quien: "Lucian", texto: "¡Bienvenidos al acto final! ¿Lo oís? Es mi amo, que late bajo la madera. Solo necesita un poco de riego… rojo.",
+            acotacion: "Señala el ataúd con el mástil del laúd." },
+          { quien: "Lucian", texto: "¡Cantad conmigo, mis perritos! Que la sangre lleve el compás.",
+            acotacion: "Fase A: empieza la Canción de sangre. Los demoperros ganan +2 al ataque, +1d6 necrótico y resistencia física (la app lo aplica)." },
+          { quien: "Lucian", texto: "Tres perros sin ojos, un árbol sin muerte, y cinco héroes sin suerte… ¡qué bello es el final cuando nadie lo advierte!",
+            acotacion: "Un verso por ronda. Lucian evita el cuerpo a cuerpo: Miedo, Patrón hipnótico, Disonancia discordante." },
+          { bloque: "🎻 Fase B: el artista se retira", quien: "Lucian", texto: "Un público exigente… me encanta. Pero el show debe continuar.",
+            acotacion: "Cuando mueran los demoperros o Lucian baje de 15 PG. Reverencia profunda." },
+          { quien: "Narrador", texto: "Detrás de él, el aire se rasga como una tela negra. Da un paso atrás, hacia la oscuridad, y lo último que veis es su máscara sonriendo… aunque la porcelana no puede sonreír.",
+            acotacion: "El portal se cierra al instante. Os deja solos con el árbol." },
+          { quien: "Nota", texto: "El telón ha caído, pero la obra no ha terminado. Mi amo tiene paciencia; yo, repertorio. — L. V.",
+            acotacion: "Atada a otra rosa negra, en la rama donde estaba sentado." },
           { bloque: "Cuando el árbol llega a 0 PG", quien: "Narrador", texto: "El árbol chilla como madera que se parte en pleno invierno. Sus hojas se ennegrecen y caen… pero no cae. Sus raíces siguen hundidas en la tierra, esperando." },
           { bloque: "Si lo desarraigan", quien: "Narrador", texto: "Con un último tirón, las raíces se sueltan con un crujido que recorre todos los túneles. A lo lejos, algo chilla… y se calla. Por primera vez, el aire huele solo a tierra." }
         ],
         bifurcaciones: [
+          { si: "Mueren los demoperros o Lucian baja de 15 PG", entonces: "Fase B: reverencia, «el show debe continuar», portal negro y huye al Valle de las Sombras. Los deja con el árbol." },
+          { si: "Lucian llega a 0 PG", entonces: "Se convierte en humo y se reforma con 1 PG en su turno (la app lo hace). Si vuelve a caer, su voz resuena en la cripta y escapa: nunca muere aquí." },
+          { si: "Atacan a Lucian para impedir la canción", entonces: "Si queda Incapacitado o no puede cantar, la Canción de sangre se apaga (la app deja de aplicarla)." },
+          { si: "Intentan seguirlo por el portal", entonces: "Se cierra justo delante de ellos. Queda en el aire un olor a rosas podridas." },
           { si: "Reducen el árbol a 0 PG", entonces: "Se marchita, pero sigue en pie: volverá a crecer en 3d10 días si no lo arrancan." },
           { si: "Usan fuego", entonces: "El árbol es vulnerable al fuego (daño doble)." },
           { si: "Lo desarraigan (Atletismo CD 15; Rilly ayuda: ventaja)", entonces: "Todas las plagas y enredaderas de los túneles mueren. Pueden abrir el ataúd.", ir: "conclusion" },
           { si: "Abren el ataúd", entonces: "Botín de Gunthar: Dardo +1, amuleto, pañuelo y 50 po." }
         ],
-        consejo: "Premia la creatividad: un conjuro, un ritual o una idea loca para arrancar el árbol también valen."
+        consejo: "Premia la creatividad: un conjuro, un ritual o una idea loca para arrancar el árbol también valen. Lucian quiere que la sangre de los héroes riegue el árbol: si alguien cae junto al tronco, que lo celebre en verso. Al irse, deja la pista para la próxima aventura."
       },
 
       "conclusion": {

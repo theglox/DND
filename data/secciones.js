@@ -160,6 +160,25 @@ window.DATA_SECCIONES = {
 
   // ================= Libro 2 · Grito de la Cosecha =================
   libro2: {
+    "preludio": {
+      notas: "🎻 Lucian Vervain, el Trovador Carmesí (CA 15, 65 PG, VD 4): añádelo en Preparar → Enemigos. Nunca muere en esta aventura."
+    },
+    "preludio-portal": {
+      pruebas: [
+        { tipo: "prueba", atributo: "DES", habilidad: "Acrobacias", cd: 13, texto: "Saltar al portal de Lucian (queda abierto 3 rondas).",
+          exito: "Cruza el portal: aparece en el camino a Goldenwheat, donde Lucian los espera.",
+          fallo: "No llega. Si nadie lo consigue en 3 rondas, el portal se cierra y Flizzlebin los guía a Goldenwheat." }
+      ]
+    },
+    "preludio-camino": {
+      pruebas: [
+        { tipo: "prueba", atributo: "INT", habilidad: "Arcanos", cd: 13, accion: "Estudiar", texto: "Examinar la rosa negra que deja Lucian al huir.",
+          exito: "Magia necromántica: la rosa está marchita, pero no muere. Huele a tierra removida… como la de la granja." },
+        { tipo: "prueba", atributo: "INT", habilidad: "Historia", cd: 15, texto: "¿Les suena el nombre de Lucian Vervain o su laúd de costillas?",
+          exito: "Hace décadas, un bardo tocaba en la mesa de un noble vampiro de la región, Gunthar el Glotón." }
+      ],
+      notas: "Combate de 3 rondas contra Lucian (añádelo en Preparar). Al final de la ronda 3, humo carmesí y huye hacia los túneles dejando una rosa negra."
+    },
     "la-peticion-de-rillard": {
       botin: [
         { nombre: "Kukri empapado en veneno", objetoId: "kukri_veneno", detalle: "Préstamo de Rillard; se lo quedan al final de la aventura" }
@@ -247,8 +266,11 @@ window.DATA_SECCIONES = {
         { tipo: "prueba", atributo: "INT", habilidad: "Arcanos", cd: 13, accion: "Estudiar", texto: "Examinar el árbol Gulthias.",
           exito: "Volverá a crecer en 3d10 días si se deja en la tierra." },
         { tipo: "prueba", atributo: "FUE", habilidad: "Atletismo", cd: 15, texto: "Desarraigar el árbol (Rilly June puede Ayudar: ventaja).",
-          exito: "Sus efectos terminan y mueren todas las Plagas aguja y Enredaderas atrapantes de los túneles." }
+          exito: "Sus efectos terminan y mueren todas las Plagas aguja y Enredaderas atrapantes de los túneles." },
+        { tipo: "prueba", atributo: "INT", habilidad: "Arcanos", cd: 13, accion: "Estudiar", texto: "🎻 Examinar la rosa negra y la nota que deja Lucian al huir.",
+          exito: "Magia necromántica: la rosa está marchita, pero no muere. La tinta de la nota huele a tierra de tumba." }
       ],
+      notas: "🎻 Lucian Vervain espera sobre una rama del árbol (añádelo al combate con los 3 demoperros). Fase A: su Canción de sangre potencia a los demoperros. Fase B: si mueren los demoperros o baja de 15 PG, huye por un portal. Nunca muere.",
       botin: [
         { nombre: "Dardo +1", objetoId: "dardo_mas1", detalle: "Con forma de extraño renacuajo (en el ataúd de Gunthar)" },
         { nombre: "Amuleto con araña de cristal", detalle: "Vale 25 po" },

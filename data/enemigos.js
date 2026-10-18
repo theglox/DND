@@ -386,6 +386,90 @@ window.DATA_ENEMIGOS = [
     vd: "1/2"
   },
   {
+    // Villano recurrente añadido por el DM (heraldo de Gunthar el Glotón). Nunca muere en estos encuentros.
+    id: "lucian", libro: "libro2",
+    nombre: "Lucian Vervain, el Trovador Carmesí", en: "The Crimson Troubadour",
+    tipo: "Muerto viviente mediano (bardo), neutral malvado",
+    pgMax: 65, pgFormula: "10d8+20",
+    ca: 15,
+    velocidad: 30,
+    atributos: { FUE: 10, DES: 16, CON: 14, INT: 13, SAB: 12, CAR: 18 },
+    salvaciones: {},
+    bonusIniciativa: 3,
+    sentidos: "Visión en la oscuridad 60 ft",
+    resistencias: ["necrótico", "veneno"], inmunidades: [], vulnerabilidades: [],
+    inmuneCondiciones: ["Hechizado", "Asustado", "Envenenado"],
+    auraCancion: true,                        // Canción de sangre: +2 ataque, +1d6 necrótico y resistencia física a sus aliados
+    noMuertoImplacable: true,                 // 1/combate: a 0 PG se vuelve humo y se reforma con 1 PG en su turno
+    escapaAlCaer: "Lucian NO muere: se disuelve en humo carmesí, su voz resuena y escapa (deja una rosa negra).",
+    espaciosConjuro: { 1: 4, 2: 3, 3: 3, 4: 1 },
+    rasgos: [
+      { nombre: "Canción de sangre (aura)", texto: "Mientras esté consciente y pueda cantar, sus aliados a 30 ft ganan +2 al ataque, +1d6 de daño necrótico y resistencia al daño físico de armas no mágicas. La app lo aplica sola (casilla en cada ataque)." },
+      { nombre: "No muerto implacable (1/combate)", texto: "Al llegar a 0 PG se disuelve en humo carmesí y se reforma con 1 PG al inicio de su siguiente turno. La app lo hace sola." },
+      { nombre: "Escape garantizado", texto: "No puede morir de forma permanente en estos encuentros: si cae de nuevo, escapa." },
+      { nombre: "Conjuros (CD 15, +7)", texto: "Trucos: Burla viciosa, Ilusión menor, Mano de mago. Espacios: nv1 ×4, nv2 ×3, nv3 ×3, nv4 ×1 (la app los descuenta)." }
+    ],
+    multiataque: { texto: "Hace dos ataques: uno con la Daga de obsidiana y otro con el Zarpazo del laúd.", ataques: ["Daga de obsidiana", "Zarpazo del laúd"] },
+    acciones: [
+      { nombre: "Daga de obsidiana", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 6, dano: "1d4+4", tipoDano: "perforante",
+        danoExtra: [{ dado: "1d6", tipo: "necrótico" }] },
+      { nombre: "Zarpazo del laúd", tipo: "cuerpo a cuerpo", alcance: "5 ft",
+        bonusAtaque: 5, dano: "1d8+3", tipoDano: "cortante",
+        efectoAlGolpear: "Salvación de SAB CD 15 o queda Hechizado hasta el final de su siguiente turno (añádelo a mano si falla)." },
+      { nombre: "Nota discordante", recarga: "5-6", alcance: "explosión de 30 ft",
+        cd: 15, salvacion: "CON", dano: "4d6", tipoDano: "trueno", alSalvar: "mitad",
+        aplicaCondicion: "Ensordecido", efectoAlFallar: "Ensordecido 1 minuto." },
+      { nombre: "Canción hipnótica", adicional: true, usosPorDia: 1, alcance: "criaturas a 30 ft",
+        cd: 15, salvacion: "SAB", aplicaCondicion: "Hechizado",
+        efectoAlFallar: "Hechizado hasta el final de su siguiente turno." },
+      // ---- Conjuros (CD 15) ----
+      { nombre: "Burla viciosa (truco)", alcance: "60 ft",
+        cd: 15, salvacion: "SAB", dano: "2d6", tipoDano: "psíquico", alSalvar: "nada",
+        efectoAlFallar: "Desventaja en su siguiente tirada de ataque antes del final de su siguiente turno." },
+      { nombre: "Disonancia discordante (nv1)", nivelConjuro: 1, alcance: "60 ft",
+        cd: 15, salvacion: "SAB", dano: "3d6", tipoDano: "psíquico", alSalvar: "mitad",
+        efectoAlFallar: "Debe usar su reacción, si puede, para alejarse de Lucian tanto como su velocidad." },
+      { nombre: "Fuego feérico (nv1)", nivelConjuro: 1, alcance: "cubo de 20 ft a 60 ft",
+        cd: 15, salvacion: "DES",
+        efectoAlFallar: "Brilla 1 min (concentración): los ataques contra él tienen ventaja y no puede ser Invisible." },
+      { nombre: "Encantar persona (nv1)", nivelConjuro: 1, alcance: "30 ft",
+        cd: 15, salvacion: "SAB", aplicaCondicion: "Hechizado",
+        efectoAlFallar: "Hechizado 1 hora (tiene ventaja en la salvación si están luchando contra Lucian). Termina si le dañan." },
+      { nombre: "Inmovilizar persona (nv2)", nivelConjuro: 2, alcance: "60 ft",
+        cd: 15, salvacion: "SAB", aplicaCondicion: "Paralizado",
+        efectoAlFallar: "Paralizado (concentración, 1 min); repite la salvación al final de cada uno de sus turnos." },
+      { nombre: "Sugestión (nv2)", nivelConjuro: 2, alcance: "30 ft",
+        cd: 15, salvacion: "SAB", aplicaCondicion: "Hechizado",
+        efectoAlFallar: "Hechizado y sigue una sugestión razonable (concentración, hasta 8 h)." },
+      { nombre: "Miedo (nv3)", nivelConjuro: 3, alcance: "cono de 30 ft",
+        cd: 15, salvacion: "SAB", aplicaCondicion: "Asustado",
+        efectoAlFallar: "Asustado (concentración, 1 min): suelta lo que tenga en las manos y huye por la ruta más segura. Repite la salvación si termina su turno sin verle." },
+      { nombre: "Patrón hipnótico (nv3)", nivelConjuro: 3, alcance: "cubo de 30 ft a 120 ft",
+        cd: 15, salvacion: "SAB", aplicaCondicion: ["Hechizado", "Incapacitado"],
+        efectoAlFallar: "Hechizado e Incapacitado, velocidad 0 (concentración, 1 min). Termina si recibe daño o alguien le zarandea (acción)." },
+      { nombre: "Invisibilidad (nv2)", texto: "Él o una criatura que toque queda Invisible (concentración, 1 h); termina al atacar o lanzar un conjuro. Gasta un espacio de nv2 a mano." },
+      { nombre: "Puerta dimensional (nv4)", texto: "Solo para escapar: se teletransporta hasta 500 ft. Gasta el espacio de nv4 a mano." },
+      { nombre: "Ilusión menor / Mano de mago", texto: "Trucos de distracción y teatro." }
+    ],
+    accionesAdicionales: [
+      { nombre: "Fuga teatral (1/combate)", texto: "Bomba de humo carmesí: se teletransporta 30 ft a un espacio que vea, sin provocar ataques de oportunidad." },
+      { nombre: "Paso espectral (2/descanso)", texto: "Incorpóreo hasta el final de su siguiente turno: resistencia al daño no mágico y atraviesa criaturas y objetos, pero no puede atacar." }
+    ],
+    reacciones: [
+      { nombre: "Contrahechizo (nv3)", texto: "Cuando ve a alguien lanzar un conjuro a 60 ft: el lanzador hace salvación de CON CD 15 o el conjuro falla y no gasta espacio." }
+    ],
+    recordatorios: [
+      { en: "turno", titulo: "Cómo lucha Lucian",
+        texto: "Evita el cuerpo a cuerpo: prefiere Miedo, Patrón hipnótico o Disonancia discordante. Canta un verso burlón cada ronda. Acorralado: Fuga teatral o Puerta dimensional." },
+      { en: "turno", titulo: "Cuándo se retira",
+        texto: "En el camino: tras 3 rondas, humo carmesí y huye a los túneles dejando una rosa negra. En T9: si mueren los demoperros o baja de 15 PG, reverencia, «El show debe continuar», portal y huye al Valle de las Sombras. Nunca muere." },
+      { en: "ataque", titulo: "Zarpazo del laúd",
+        texto: "Si impacta con el laúd: salvación de SAB CD 15 o Hechizado hasta el final de su siguiente turno (añádelo a mano)." }
+    ],
+    vd: "4"
+  },
+  {
     id: "plebeyo", libro: "libro2",
     nombre: "Plebeyo", en: "Commoner",
     tipo: "Humanoide mediano o pequeño, neutral",

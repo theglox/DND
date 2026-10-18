@@ -23,7 +23,8 @@ window.Combate = (function () {
   const combate = () => Estado.get().combate;
   const participante = (c, uid) => c.participantes.find((p) => p.uid === uid);
   const datosDe = (p) => porId(p.tipo === "pj" ? PJS : ENEMIGOS, p.refId);
-  const fuera = (p) => (p.tipo === "enemigo" && p.pg <= 0) || Boolean(p.muerto);
+  // enHumo: a 0 PG pero se reforma en su turno (No muerto implacable): sigue en la iniciativa
+  const fuera = (p) => (p.tipo === "enemigo" && p.pg <= 0 && !p.enHumo) || Boolean(p.muerto);
 
   function log(c, texto) {
     c.log.push({ ronda: c.ronda, texto });
